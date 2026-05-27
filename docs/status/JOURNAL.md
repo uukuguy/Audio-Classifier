@@ -87,3 +87,8 @@
 
 ## 2026-05-28
 - 会话收口 [2632c6b]：MEMORY 从空 bootstrap(8文件分类:reference确定事实/project当前判断带日期/feedback反馈)，CURRENT-STATE+RESUME 重写到终态，INDEX 加 MEMORY 指针。恢复用 /project-state resume(非gsd)
+- 03:04 用户定：先做②(30s切片验证集+cycle1集成,零投入)，同时评估GPU云主机方案
+- 03:17 切片CV脚本跑通(2fold冒烟):切片CV=0.6086 vs 滑窗0.5911，gap+0.12→+0.10。★BC 0.215→0.333(切片分布下瓶颈类涨50- 03:17 切片CV脚本跑通(2fold冒烟):切片CV=0.6086 vs 滑窗0.5911,gap+0.12→+0.10。★BC 0.215→0.333(切片分布下瓶颈类涨50%)。滑窗系统性低估BC
+- 03:31 切片CV三档对照(2fold):cap1 gap+0.067(最逼近线上,验证集最像test) < cap5 0.11 < all 0.116 ≈ 滑窗0.12。采样越密CV越悲观=证实滑窗不可信根因。但cap1样本少(369)BC不稳,需5fold降噪
+- 03:42 ★5fold切片CV定论:cap1可信协议 gap+0.118→+0.055(每通1片段=模拟test 1000独立片段)。真相:滑窗低估NA/T/I(线上超额来自这三类)。BC三档都钉0.22=确认真瓶颈非CV假象。可信CV锚=0.6561
+- 04:03 上云产物就绪(cloud/):Dockerfile+提取(断点续跑,PID/artifact双信号)+神经头(cap1切片CV+出CSV)+一键脚本+AutoDL操作单。本机whisper-small全链路冒烟通过(提取→缓存→训头→CSV格式对→续跑跳过)。large-v3留云上(small都180ms/窗证实本机不可行)

@@ -1,0 +1,8 @@
+# FinVCup 上云 + 复赛镜像依赖锚定（与本机 conda env deep-research 对齐）
+# torch/torchaudio 不在此 pin——由 CUDA base image 提供（见 Dockerfile），避免装错 CUDA 轮子
+transformers==5.5.0
+lightgbm==4.6.0
+scikit-learn==1.8.0
+numpy==2.4.4
+accelerate>=1.0.0
+safetensors>=0.4.5
