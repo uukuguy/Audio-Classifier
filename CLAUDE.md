@@ -42,6 +42,12 @@ ln -s ~/.claude/shared-rules/lightweight-memory.md .claude/rules/lightweight-mem
 `pred_test1.csv`：`segment_id,c,na,i,bc,t`（列名小写，值 0/1，顺序同 config `labels.multi_targets`）。
 用户手动提交后贴回 Macro-F1 真分校准本地 CV。
 
+### 模型使用边界（HARD RULE）
+
+- **模型总参数量 ≤ 8B**（硬上限，同时约束复赛镜像推理成本）
+- **优先白名单 Qwen 系列**：Qwen2.5-Omni-3B/7B、Qwen3-4B/0.6B/0.8B（见赛题要求.md）
+- 非 Qwen 公开模型（WavLM/wav2vec2/HuBERT 等）**仅在能带明显增益时才用**，需 EDA/小实验佐证
+
 ### 合规（重要）
 
 - 用公开数据/模型需 **2026-06-10 前**向 `xinyebei@xinye.com` 报备

@@ -15,7 +15,19 @@
 
 | 文件 | 是什么 |
 |---|---|
-| `../plans/2026-05-27-finvcup-turn-taking-CONTEXT.md` | discuss 阶段决策契约（9 决策 / 6 开放问题 / 3 延后） |
+| `../plans/2026-05-27-finvcup-turn-taking-CONTEXT.md` | discuss 阶段决策契约（10 决策 / 开放问题 / 延后项） |
+| `../plans/2026-05-27-turn-taking-audio-RESEARCH.md` | research：VAP/BC SOTA + 编码器选型 + Macro-F1 优化（含可复用资产清单） |
+| `../../tests/main/eda_context_baseline.py` | EDA：纯上下文标签基线（Macro-F1=0.59，可运行） |
+
+## climb（LLM 驱动迭代框架）
+
+| 路径 | 是什么 |
+|---|---|
+| `.claude/rules/climb.md`（symlink→全局） | climb 执行手册（项目无关） |
+| `.claude/climb/climb.config.yaml` | 本项目 adapter：manual-csv、5 类子分、SOTA 锚点（gitignored） |
+| `.claude/climb/hypotheses.yaml` | 假设池（paradigm C/B/A/ensemble，8 假设）（gitignored） |
+| `.claude/climb/{calibration,runs.csv,pending-lb,session-*}` | climb 状态机（gitignored，HARD INVARIANT：state on disk） |
+| `../../tools/climb/*.sh` | adapter 脚本（push/apply-lb-score/eval-local/train/consult-ais，tracked） |
 
 ## External anchors
 
