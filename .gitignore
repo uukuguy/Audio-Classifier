@@ -1,0 +1,25 @@
+.claude/
+.codegraph/
+data/
+outputs/
+*.pyc
+.DS_Store
+simulator/
+
+# editable install / 训练产物
+*.egg-info/
+
+
+# SAC training run artifacts (TB log + checkpoints + ONNX intermediates)
+tools/onnx/
+tools/runs/
+wandb/
+
+# SAC training (2026-05-24+, 25GB+ runs)
+runs/
+
+
+baselines/
+# tmp scratch
+tmp/
+
