@@ -84,3 +84,6 @@
 - 22:45 教训：本机跑训练必须限线程(留余量给系统)，否则 PyTorch 抢满核卡死全机。后续所有本机训练加 NUM_THREADS 限制
 - 23:10 ★终结性结论：whisper-small 限4线程后 25min 才 1/10 通(10通4h不可用)。本机跑 whisper 系音频编码器无论大小全否：不限线程卡死全机(load39)，限线程太慢。杀 H-V3d
 - 23:10 本机音频编码器路线实测穷尽(mel无增量/whisper快则卡慢则不可用)。决策门交用户：上云GPU(唯一能跑whisper) 或 守0.7108换零投入角度(30s切片验证集/集成)。不自主上云(花钱+新方向)
+
+## 2026-05-28
+- 会话收口 [2632c6b]：MEMORY 从空 bootstrap(8文件分类:reference确定事实/project当前判断带日期/feedback反馈)，CURRENT-STATE+RESUME 重写到终态，INDEX 加 MEMORY 指针。恢复用 /project-state resume(非gsd)
