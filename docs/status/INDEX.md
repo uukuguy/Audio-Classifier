@@ -28,6 +28,8 @@
 | `.claude/climb/hypotheses.yaml` | 假设池（paradigm C/B/A/ensemble，8 假设）（gitignored） |
 | `.claude/climb/{calibration,runs.csv,pending-lb,session-*}` | climb 状态机（gitignored，HARD INVARIANT：state on disk） |
 | `../../tools/climb/*.sh` | adapter 脚本（push/apply-lb-score/eval-local/train/consult-ais，tracked） |
+| `../../tools/climb/cycle_*.py` | cycle 实现（context/context_v2/audio_fusion/text_fusion + regen-tree） |
+| `research-tree.md` | **climb 战略可视化（generated，每 LB 注入 auto-regen）**：paradigm ladder + 假设池 + 诊断链 |
 
 ## External anchors
 

@@ -42,6 +42,29 @@ ln -s ~/.claude/shared-rules/lightweight-memory.md .claude/rules/lightweight-mem
 `pred_test1.csv`：`segment_id,c,na,i,bc,t`（列名小写，值 0/1，顺序同 config `labels.multi_targets`）。
 用户手动提交后贴回 Macro-F1 真分校准本地 CV。
 
+### 阈值铁律（HARD-WON，2026-05-27 实测代价 −0.027）
+
+**不要在滑窗 CV 上做激进的逐类阈值搜索。** 实测：v2 在滑窗 5-fold OOF 上把 T 阈值调到 0.64（CV 0.5921 略高），线上反而 0.6833 < cycle1 的 0.7108（cycle1 阈值更接近 0.5）。
+
+根因：**滑窗 CV 分布 ≠ test 独立 30s 切片分布**（gap 稳定 +0.10 是铁证）。在错配分布上调出的极端阈值，搬到 test 系统性变差，越偏离 0.5 越伤。
+
+正确做法：①阈值接近 0.5 / 只轻调；②或用**模拟 test 的 30s 切片化验证集**调阈值（见 CONTEXT Decision 4）；③**per-class-aware，不一刀切**：C 类 94% 恒正，安全于低阈值（~0.05），用 [0.35,0.65] floor 反而砍崩 C（974→348 正例，实测 −0.05）。只有 T/I/BC 这些中低频类怕激进阈值。**激进逐类阈值搜索 = 在错配分布上过拟合。**
+
+### BC 诊断链（2026-05-27，3 cycle 实测排除便宜路线）
+
+BC（backchannel）是 Macro-F1 瓶颈类。手工特征 + LGBM 对 BC 彻底到顶：
+- context 标签 → BC F1 **0.217**
+- + 廉价声学特征（energy/zcr/voicing/双声道对比）→ **0.219**（无效）
+- + ASR 词汇统计（BC词频/距/通道）→ **0.201**（无效甚至略降）
+
+**结论：BC 真需神经编码器**——Qwen 语义（理解"对方会不会插话"的时机）或 SSL 音频（细粒度韵律/onset）。词袋/粗声学抓不到"未来 2s 会不会 BC"的预测问题。
+**意外收获**：文本词汇特征帮了 **T（0.54→0.58）和 I（0.44→0.49）**——文本该救 T/I，不是 BC。
+
+### 架构铁律（2026-05-27，杀掉 Qwen3 提取后确认）
+
+**稠密 neural embedding 不要喂 LGBM/树模型。** 实测：Qwen3-0.6B mean-pool 1024d + context 喂 LGBM = macro 0.583→0.575（全面略降）。原因：①树逐特征切分，1024d 稠密信号被稀释 ②mean-pool 丢时序。
+**3-strike 诊断**：context-v2 / 廉价声学 / 词汇 / Qwen3-embed 全喂 LGBM 都撞 ~0.71 墙——**瓶颈在"喂 LGBM"这个架构，不在特征本身。** 要突破必须换架构：**embedding 喂神经小头（可微调 + 时序建模，如 transformer over 序列），不是树。** 词袋稀疏特征是 LGBM 的例外（可解释、低维）。
+
 ### 模型使用边界（HARD RULE）
 
 - **模型总参数量 ≤ 8B**（硬上限，同时约束复赛镜像推理成本）
@@ -57,9 +80,27 @@ ln -s ~/.claude/shared-rules/lightweight-memory.md .claude/rules/lightweight-mem
 
 ## 算力分工
 
-- **本机 MBP M3 Max 128GB（MPS，PyTorch 2.7.1）**: EDA / 数据预处理 / 小规模冒烟 / 调试代码
-- **云 GPU（A100/4090 级）**: 正式大规模训练（1.4M 滑窗样本 + 大编码器）
+- **本机 MBP M3 Max 128GB（MPS，PyTorch 2.7.1 + torchaudio 2.7.1，conda env `deep-research`）**: 主力——冻结编码器+特征缓存训小头
 - 复赛镜像必须在 **CUDA** 上最终验证
+
+### 模型下载 workaround（HARD-WON 2026-05-27）
+
+`huggingface_hub` client (v1.13) 连 hf-mirror.com / huggingface.co **都 HEAD 失败**（`FileMetadataError: Distant resource does not seem to be on huggingface.co`），但 **curl 正常**（HTTP 200）。解法：
+
+```bash
+# 列文件
+curl -sL "https://hf-mirror.com/api/models/<org>/<model>" | python -c "import sys,json;[print(f['rfilename']) for f in json.load(sys.stdin)['siblings']]"
+# curl 直下到本地目录，用本地路径加载（绕过 hf client）
+DEST=~/.cache/manual_models/<model>; mkdir -p $DEST
+curl -sL -o $DEST/config.json "https://hf-mirror.com/<org>/<model>/resolve/main/config.json"  # 等
+AutoModel.from_pretrained("~/.cache/manual_models/<model>")
+```
+
+ModelScope 被墙（HTTP 000）；HF/hf-mirror 可达。
+
+### MPS 特征缓存可行性（实测）
+
+Qwen3-0.6B MPS 特征提取 **63ms/段**。train 1.44M 滑窗朴素提取=25h 不可行，但**文本上下文去重后唯一值仅 8.3%（~12万）→ ~126min 可接受**。**冻结编码器路线必须按唯一上下文去重缓存，不可每滑窗重算。**
 
 ## Long-task patterns (for lwm hooks)
 

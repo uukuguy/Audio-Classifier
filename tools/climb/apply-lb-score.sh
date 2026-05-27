@@ -53,10 +53,19 @@ runs = climb/"runs.csv"
 rows = list(csvmod.reader(runs.read_text().splitlines()))
 header = rows[0]
 local_score = None; updated = False
+idx = {h: i for i, h in enumerate(header)}
+# 已有最佳线上分（排除本 run），用于判 verdict
+prior_best = 0.0
+for r in rows[1:]:
+    if not r or r[0].startswith('#') or r[0] == run_id:
+        continue
+    try:
+        prior_best = max(prior_best, float(r[idx["online_score"]]))
+    except (ValueError, IndexError):
+        pass
 for r in rows[1:]:
     if not r or r[0].startswith('#'): continue
     if r[0] == run_id:
-        idx = {h:i for i,h in enumerate(header)}
         r[idx["online_score"]] = f"{online}"
         for s in per_sub:
             if f"online_{s}" in idx: r[idx[f"online_{s}"]] = f"{per_sub[s]}"
@@ -65,6 +74,11 @@ for r in rows[1:]:
         except: pass
         if local_score is not None:
             r[idx["gap"]] = f"{online - local_score:.4f}"
+        # 自动判 verdict（同步 research-tree 用）
+        if online > prior_best:
+            r[idx["verdict"]] = f"confirmed SOTA +{online - prior_best:.4f}" if prior_best > 0 else "confirmed first"
+        else:
+            r[idx["verdict"]] = f"falsified {online - prior_best:.4f} vs best"
         updated = True
 if updated:
     with open(runs, "w", newline="") as f: csvmod.writer(f).writerows(rows)
@@ -94,3 +108,9 @@ if per_sub: print(f"[climb-lb] 子分: {per_sub}")
 print(f"[climb-lb] calibration[{paradigm}] n={calib['paradigms'][paradigm]['n_samples']} mean_gap={calib['paradigms'][paradigm]['mean_gap']}")
 print(f"[climb-lb] 已从 pending 移除。climb 应据此重排假设池继续。")
 PY
+
+# --- 同步 research-tree（HARD INVARIANT #4: LB land 时 regen）---
+PY_BIN="${CLIMB_PY:-python3}"
+if [ -f "$ROOT/tools/climb/regen-tree.py" ]; then
+  "$PY_BIN" "$ROOT/tools/climb/regen-tree.py" >/dev/null 2>&1 && echo "[climb-lb] research-tree synced" || echo "[climb-lb] WARN: regen-tree failed"
+fi
