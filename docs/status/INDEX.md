@@ -8,8 +8,19 @@
 | 文件 | 是什么 | 状态 |
 |---|---|---|
 | `CURRENT-STATE.md` | 结构快照：架构、关键文件、当前焦点 | 🟢 active |
-| `RESUME-NEXT-SESSION.md` | session 交接棒：刚做了什么、下一步动作 | 🟢 active |
-| `JOURNAL.md` | append-only 事件日志（每 commit/验证/弃路一行） | 🟢 active |
+| `RESUME-NEXT-SESSION.md` | session 交接棒（恢复用 `/project-state resume`） | 🟢 active |
+| `JOURNAL.md` | append-only 事件日志 | 🟢 active |
+| `research-tree.md` | climb 战略可视化（generated，1 confirmed/9 falsified） | 🟢 active |
+
+## 跨会话记忆（MEMORY，恢复入口）
+
+| 路径 | 是什么 |
+|---|---|
+| `~/.claude/projects/-Users-...-Audio-Classifier/memory/MEMORY.md` | 记忆索引（project/reference/feedback 分类） |
+| └ `project_status_*` | 当前判断（SOTA/决策门，带日期会过时） |
+| └ `reference_negative_cache` | 9 负结果 don't re-explore（验证确定事实） |
+| └ `reference_mps_hardware_limits` / `reference_threshold_law` | 实测硬约束 + 阈值铁律 |
+| └ `feedback_*` | 协作反馈（先验证再全量 / 收口 / 私有文件） |
 
 ## Decisions / 契约
 
@@ -28,7 +39,7 @@
 | `.claude/climb/hypotheses.yaml` | 假设池（paradigm C/B/A/ensemble，8 假设）（gitignored） |
 | `.claude/climb/{calibration,runs.csv,pending-lb,session-*}` | climb 状态机（gitignored，HARD INVARIANT：state on disk） |
 | `../../tools/climb/*.sh` | adapter 脚本（push/apply-lb-score/eval-local/train/consult-ais，tracked） |
-| `../../tools/climb/cycle_*.py` | cycle 实现（context/context_v2/audio_fusion/text_fusion + regen-tree） |
+| `../../tools/climb/cycle_*.py` | 9 cycle 实现（context/context_v2/audio_fusion/text_fusion×2/vap_mel/vap_fusion/vap_whisper + extract_text_feats + regen-tree） |
 | `research-tree.md` | **climb 战略可视化（generated，每 LB 注入 auto-regen）**：paradigm ladder + 假设池 + 诊断链 |
 
 ## External anchors

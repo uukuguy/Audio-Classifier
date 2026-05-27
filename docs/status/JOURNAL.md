@@ -75,3 +75,12 @@
 - 21:30 curl 直下 whisper-large-v3(绕hf client)。下一步实测 MPS 提取速度(32层1280维比Qwen3重，可能慢，先验证不假设)。保帧序列喂 H-V2 的 cross-attn 融合架构(把mel换whisper帧特征)
 - 21:40 ★硬约束：whisper-large-v3 encoder MPS = 800-1600ms/段(双声道1.6-2.1s/窗)。fp32修复了dtype，但batch化没帮(MPS已吃满,batch反更慢)。40通验证5h，全量45h+。本机MPS跑whisper-large-v3提取不可行
 - 21:40 决策点(交用户)：Qwen2-Audio=whisper-large-v3本机不可行。出路：①更小whisper(base/small,本机可行但表征弱可能像mel救不了BC) ②云GPU(large-v3快但需定云) ③守0.7108换角度(30s切片验证集/集成,零投入)。不自主赌
+- 21:53 用户定试whisper。whisper-small(12层768,283ms/窗本机可行)启动 H-V3，验证 SSL 音频对 BC 增量
+- 22:05 ★关机中断 H-V3(只跑到提取whisper帧)。恢复：进程死/产物无/SOTA CSV完好。commit 08f8f84 保住 VAP 三脚本+教训(防失忆)。重跑 H-V3
+- 22:28 H-V3b 又挂(只到提取帧)。我误判为OOM/代码bug→用户纠正：是被其它CC实例误杀，非代码问题。诊断方向错了
+- 22:35 H-V3c 重启(nohup+disown，macOS无setsid)。教训：本机多CC并行时长任务进程可能被误杀，用 disown 脱离父树。代码本身没问题
+- 22:40 ★卡机：用户报全机卡。load=39(16核)！根因 PyTorch 默认抢满16核+whisper多线程→过载。杀掉缓解
+- 22:45 ★治本：限线程重跑 H-V3d。OMP/MKL/VECLIB/OPENBLAS_NUM_THREADS=4 + torch.set_num_threads(4) + 10通最小规模。load 回到~10，单进程88%cpu不卡机。(注:PYTORCH_MPS_HIGH_WATERMARK_RATIO 设0.5报错，去掉)
+- 22:45 教训：本机跑训练必须限线程(留余量给系统)，否则 PyTorch 抢满核卡死全机。后续所有本机训练加 NUM_THREADS 限制
+- 23:10 ★终结性结论：whisper-small 限4线程后 25min 才 1/10 通(10通4h不可用)。本机跑 whisper 系音频编码器无论大小全否：不限线程卡死全机(load39)，限线程太慢。杀 H-V3d
+- 23:10 本机音频编码器路线实测穷尽(mel无增量/whisper快则卡慢则不可用)。决策门交用户：上云GPU(唯一能跑whisper) 或 守0.7108换零投入角度(30s切片验证集/集成)。不自主上云(花钱+新方向)

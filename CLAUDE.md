@@ -109,6 +109,18 @@ ModelScope 被墙（HTTP 000）；HF/hf-mirror 可达。
 - whisper-large-v3 音频：每窗都不同（去重率低），且单段就 ~1s，本机 MPS 无解 → 需云 GPU 或更小 whisper（base/small）。
 - 模型下载的 safetensors 默认 fp16，MPS 上 conv 需 fp32 → 加载用 `dtype=torch.float32`。
 
+### 本机训练必须限线程（HARD RULE，2026-05-27 卡机教训）
+
+PyTorch 默认抢满全部 16 核 + 编码器多线程 → **load 飙到 39（16核机），全机卡死**。本机跑任何训练/特征提取**必须限线程**留余量给系统：
+
+```bash
+OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 VECLIB_MAXIMUM_THREADS=4 OPENBLAS_NUM_THREADS=4 \
+  python -c "import torch; torch.set_num_threads(4); ..."
+```
+
+后台长任务用 `nohup ... & disown`（macOS 无 `setsid`），脱离父树防被其它 CC 实例误杀。
+`PYTORCH_MPS_HIGH_WATERMARK_RATIO` 别乱设（设 0.5 会报 invalid watermark 错）。
+
 ## Long-task patterns (for lwm hooks)
 
 > Hook reads each `name: regex` line below. Match → 提醒 AI 跑 /project-state check.
