@@ -1,45 +1,46 @@
 # RESUME — Next Session
 
-**Last updated:** 2026-05-27 12:12
+**Last updated:** 2026-05-27 20:26
 
 ## TL;DR
 
-FinVCup 2026 对话轮次预测赛题。Discuss 已完成、CLAUDE.md 已重写、docs/status 已初始化。决策契约在 `docs/plans/2026-05-27-finvcup-turn-taking-CONTEXT.md`。下一步进 writing-plans，把 EDA 必答清单排成第一批任务。
+FinVCup turn-taking。climb 跑了 6 cycle，**便宜路线(LGBM/冻结pooled特征)全部撞 0.7108 墙**（6 负结果）。当前 SOTA = cycle1 纯上下文 LGBM **公榜 0.710789（排22）**。用户已定下一步：**做 research 主推的 VAP 双声道音频编码器攻 BC**。
 
-## 已完成（本 session）
+## 当前最优
 
-- /discuss → `docs/plans/2026-05-27-finvcup-turn-taking-CONTEXT.md`（9 决策契约）
-- 重写 `CLAUDE.md`（清理 Fusion-Control 残留），删 climb.md 残留 symlink
-- 初始化 `docs/status/`（INDEX/CURRENT-STATE/JOURNAL/RESUME）
-- 尚未 commit
+- **cycle1 context-only：公榜 0.710789**（CV 0.5908，gap +0.12）
+- 提交工件：`tools/runs/climb/20260527-1636-h001-context-only/pred_test1.csv`
 
-## Next steps（具体动作）
+## 已排除（6 负结果，研究树 negative cache）
 
-1. **commit** 本次状态整理（CLAUDE.md + docs/status/ + docs/plans/CONTEXT）
-2. `/superpowers:writing-plans` 读 CONTEXT.md → 出 PLAN.md
-3. **第一批任务 = EDA**（CONTEXT Decision 9 清单）：
-   - test context 标签分布 vs train 末段 → 是否泄漏未来事件先验
-   - 各模态边际贡献（context-only / +text / +audio 的 CV Macro-F1）
-   - 稀有类窗口级正样本率（决定重采样比例 + 阈值搜索范围）
-   - 8kHz 原生 vs 16k 重采样对语音编码器影响
-   - ASR 文本质量/覆盖（test ~8 句 vs train 355 句）
-4. 复现并跑通 baseline 拿第一个公榜锚点分
+便宜路线全到顶——**根因：冻结编码器抽 pooled 特征(喂树/喂神经头)对 turn-taking 无效**（mean-pool 丢时序 + 冻结通用语义无 turn-taking 信号）。BC 铁卡 0.20-0.22。
 
-## Open questions
+## Next steps（VAP 路线，吸取教训：先小验证再全量）
 
-- 云 GPU 选型 + 数据上传方式（实际传 369 通原始 wav + label/text，按需切片）
-- 语音编码器选型（中文电话域：WavLM / Chinese-wav2vec2 / Whisper-encoder 解冻）—— bake-off 内定
-- 比赛报备/联系邮箱（6/10 前报备）→ 需问用户，勿用系统 userEmail
+1. **先验证架构，再上大编码器**：双声道帧序列 + 轻量 cross-attention 小头，编码器先用便宜的（mel/CNN），看 BC 能否动
+2. BC 动了 → 换 Qwen2-Audio Whisper encoder（白名单 640M，冻结，curl 直下绕 hf client）放大
+3. **关键铁律**：保帧序列不 pool（前 6 cycle 都栽在 pool）；双声道 cross-attention 是 BC 主导线索
+4. 复用 baseline 的 8k 双声道音频 IO（`baselines/.../dataset.py:_read_wav_slice`）
 
-## Ruled out
+## 关键约束/教训（详见 CLAUDE.md）
 
-- Qwen2.5-Omni 端到端（推理时延=复赛镜像风险，本机难训）→ 延后，触发：集成到 ~0.72 还差临门一脚
-- 全程本机 MPS（大模型训练慢 + 复赛 CUDA 镜像无法本机验证）
+- 阈值：滑窗 CV 调激进阈值线上更差，保 ~0.5 / per-class-aware（C 低阈值安全）
+- 稠密 embedding 不喂树；冻结 pooled 特征对本任务无效
+- **投入前先小规模验证架构匹配**（栽过：Qwen3 提取跑 29% 才发现无效）
+- 模型 curl 直下（hf client HEAD 失败）；MPS 可行但端到端训练耗时需重估
+- 提交是用户的事（5次/天），climb 只产候选 + 报 CV
 
 ## Ready commands
 
 ```bash
-# 跑通 baseline（需先改 config 路径到 data/train）
-cd baselines/2026_finvcup_baseline
-# 本机冒烟（MPS，小样本）：python -m src.train --epochs 1 --max_train_samples 200
+# 已缓存资产
+ls data/cache/qwen_text/   # 110通 Qwen3文本特征(此路已否，但缓存框架可借鉴)
+# baseline 音频 IO 参考
+sed -n '119,154p' baselines/2026_finvcup_baseline/src/data/dataset.py
+# climb 状态
+cat .claude/climb/session-state.json; cat docs/status/research-tree.md
 ```
+
+## Ruled out (don't re-explore)
+
+context-only 加码 / 廉价声学 / 文本词汇 / Qwen3 mean-pool(树or神经头) —— 全是冻结/pooled 特征喂浅模型，撞 0.71 墙。

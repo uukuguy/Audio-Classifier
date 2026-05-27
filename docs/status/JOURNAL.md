@@ -62,3 +62,16 @@
 - 20:05 ★负结果5：神经融合头也救不了。ctx-only(神经)macro 0.5883 vs ctx+Qwen3 0.5676(−0.021，BC 0.227→0.168大降)。推翻"喂树是唯一问题"——冻结Qwen3 mean-pool 文本本身就是噪声
 - 20:05 更深诊断：mean-pool丢时序(turn-taking强时序) + 冻结通用语义无turn-taking信号。要用Qwen必须端到端微调保序列=另一量级投入。冻结编码器抽pooled特征(喂树/喂神经头)对本任务全无效
 - 20:05 意外：纯context喂神经头 BC=0.227 > 喂LGBM 0.217。神经头对context略好，但Qwen3文本是纯负担
+- 20:25 commit c1d3fa3：6 cycle 迭代+教训+工具(regen-tree修2bug/apply-lb自动verdict)。便宜路线天花板 0.7108 钉死，存档防失忆。删 uv.lock 残留
+- 20:25 战略叉(待用户定)：剩端到端微调/VAP音频两条大投入真路。便宜本机甜区用尽，云GPU性价比重新浮现
+- 20:30 用户定：先做 research 主推 VAP。H-V1=双声道mel帧序列+cross-attn(保序列不pool)，先mel便宜编码器(1.9ms/窗)+40通小验证
+- 20:46 H-V1 首跑 macro=0.000 全零=bug非科学结论。chain诊断：loss=nan从ep0。根因 log-mel值域[-11.5,9]未归一化→梯度爆炸
+- 20:48 修复(strike2)：输入 BatchNorm1d(per-mel-bin) + conv 间 BatchNorm + grad_clip 1.0。8通sanity确认 loss正常无nan、prob有区分度。重跑40通
+- 21:06 H-V1b 跑通(无nan)：纯音频双声道mel+cross-attn macro=0.540, BC=0.161。但对比不公平(纯音频 vs 纯context 0.227，不同输入)
+- 21:08 H-V2 公平对比：ctx+VAP音频融合 vs 纯ctx神经头(BC0.227)。关键问题=音频给context带增量吗？超0.227→VAP值得换Qwen2-Audio放大；不超→mel对BC无补充(或欠拟合/需更强编码器)
+- 21:25 ★H-V2 干净负结果：ctx+VAP音频融合 macro=0.5812 BC=0.198 < 纯ctx 0.5883/BC0.227。同输入同架构公平对比→mel音频对context无BC增量
+- 21:25 元判断：连8 cycle 全负，本机最便宜音频验证(mel)也否。"换Qwen2-Audio"是大投入下注(640M+提取慢4h+可能欠拟合/架构没对准也白搭)。不自主赌，交用户定。可能性:mel太弱/40通欠拟合/cross-attn没对准BC瞬时性
+- 21:30 用户定换 Qwen2-Audio SSL 编码器。★关键发现：Qwen2-Audio 音频编码器=whisper-large-v3 encoder(完全一致 num_mel_bins128/d_model1280/32层)。只下 whisper-large-v3 用其 encoder(~1.5GB)即可，省下16GB的7B，且合规(≤8B)
+- 21:30 curl 直下 whisper-large-v3(绕hf client)。下一步实测 MPS 提取速度(32层1280维比Qwen3重，可能慢，先验证不假设)。保帧序列喂 H-V2 的 cross-attn 融合架构(把mel换whisper帧特征)
+- 21:40 ★硬约束：whisper-large-v3 encoder MPS = 800-1600ms/段(双声道1.6-2.1s/窗)。fp32修复了dtype，但batch化没帮(MPS已吃满,batch反更慢)。40通验证5h，全量45h+。本机MPS跑whisper-large-v3提取不可行
+- 21:40 决策点(交用户)：Qwen2-Audio=whisper-large-v3本机不可行。出路：①更小whisper(base/small,本机可行但表征弱可能像mel救不了BC) ②云GPU(large-v3快但需定云) ③守0.7108换角度(30s切片验证集/集成,零投入)。不自主赌

@@ -98,9 +98,16 @@ AutoModel.from_pretrained("~/.cache/manual_models/<model>")
 
 ModelScope 被墙（HTTP 000）；HF/hf-mirror 可达。
 
-### MPS 特征缓存可行性（实测）
+### MPS 特征提取速度（实测，决定哪些编码器本机可行）
 
-Qwen3-0.6B MPS 特征提取 **63ms/段**。train 1.44M 滑窗朴素提取=25h 不可行，但**文本上下文去重后唯一值仅 8.3%（~12万）→ ~126min 可接受**。**冻结编码器路线必须按唯一上下文去重缓存，不可每滑窗重算。**
+| 编码器 | MPS 速度 | 本机可行性 |
+|---|---|---|
+| Qwen3-0.6B（文本） | 63ms/段 | ✓（去重缓存后 ~126min） |
+| **whisper-large-v3 encoder（=Qwen2-Audio 音频塔，32层1280维）** | **800-1600ms/段** | **✗ 不可行**（40通验证5h，全量45h+；fp32必需，batch化无帮 MPS 已吃满） |
+
+- Qwen3 文本：train 1.44M 滑窗朴素=25h，但去重后唯一上下文 8.3% → 126min。**冻结编码器必须按唯一上下文去重缓存，不可每滑窗重算。**
+- whisper-large-v3 音频：每窗都不同（去重率低），且单段就 ~1s，本机 MPS 无解 → 需云 GPU 或更小 whisper（base/small）。
+- 模型下载的 safetensors 默认 fp16，MPS 上 conv 需 fp32 → 加载用 `dtype=torch.float32`。
 
 ## Long-task patterns (for lwm hooks)
 
