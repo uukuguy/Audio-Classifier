@@ -45,30 +45,48 @@
 
 ---
 
-## 5. 数据上传(我已写好打包脚本)
+## 5. 数据上传 (本项目走官方 zip 包, 不打包)
 
-本机先打包(我可代跑):
-```bash
-bash cloud/pack_data.sh                  # → data/cloud_upload/{meta,test_audio,train_audio}.tar*
-# 冒烟只需 meta + test_audio + 前 40 通 train audio(小,先验证链路)
-```
-上传到 AutoDL:控制台"文件存储"网盘上传,或 `scp -P <port> data/cloud_upload/*.tar* root@<host>:/root/autodl-tmp/`
-云端解包到 repo 根的 `data/` 下。
+官方提供 `finv11th_train_test_data.zip` (~18GB, 内含 `train/` `test/` 两层)。
+你直接上传到云端 `/root/autodl-fs/finv11th_train_test_data.zip`,setup 脚本自动解压套层成 `data/train/...`(脚本零改)。
+
+> 早期 `pack_data.sh` 已废弃——是本机打包再上传的旧路线,改用官方 zip 直传更直接。
 
 ---
 
-## 6. 云端跑(脚本已就绪,断点续跑)
+## 6. 云端跑(本项目实测路径,2026-05-28)
+
+**实测实例**: 4090 48G 显存 / 127G 系统盘 (够,余量 43%) / Python 3.12 镜像 / SSH 互信已建。
 
 ```bash
-# repo 根(git clone 或上传 cloud/+tools/climb/cycle_context.py)
-bash cloud/run_cloud.sh smoke   # 前 40 通 train + 全 test，验证速度/BC 信号
-# 冒烟有信号 → 全量
-bash cloud/run_cloud.sh full
-```
-产物:`tools/runs/climb/cloud-whisper-h001/pred_test1.csv` + `cv_metrics.json`(含 cap1 切片 CV + BC F1)
-下载 CSV 回本机 → 你手动提交公榜 → 贴回真分 → 我注入 climb calibration。
+# A. 本机: rsync 推送代码到云 (本仓库无 git remote, 走 rsync 不走 git clone)
+bash cloud/push_code.sh                  # 推 cloud/ + tools/climb/cycle_context.py → /root/audio-classifier
 
-**断点续跑**:spot 被抢/中断,重跑 `run_cloud.sh extract` 只补未完成的通(`data/whisper_cache/<split>/_done/` 记进度)。
+# B. 云端: 一键 setup (解压 + 装依赖 + 下模型, 不跑训练)
+ssh -p 46379 root@connect.westd.seetacloud.com
+cd /root/audio-classifier
+bash cloud/setup_cloud.sh                # 跑完打印冒烟命令
+
+# C. 云端: 冒烟 (前 40 通, ~1.2GB 缓存, 验证 BC 是否抬头)
+mkdir -p tools/runs/climb/cloud-whisper-smoke
+nohup bash cloud/run_cloud.sh smoke > tools/runs/climb/cloud-whisper-smoke/run.log 2>&1 &
+echo $! > tools/runs/climb/cloud-whisper-smoke/run.pid
+tail -f tools/runs/climb/cloud-whisper-smoke/run.log     # 看到 EXTRACT_COMPLETE + cap1切片CV macro=... + ★BC=... 即冒烟完
+
+# D. 冒烟有信号 → 全量 (~41GB 缓存, 余量 43% 够)
+RUN_DIR=tools/runs/climb/cloud-whisper-full nohup bash cloud/run_cloud.sh full \
+  > tools/runs/climb/cloud-whisper-full/run.log 2>&1 &
+
+# E. 拿 CSV 回本机 → 手动提交公榜 → 贴回真分 → climb 注入 calibration
+scp -P 46379 root@connect.westd.seetacloud.com:/root/audio-classifier/tools/runs/climb/cloud-whisper-smoke/pred_test1.csv .
+```
+
+**断点续跑**: spot 被抢/中断, 重跑 `run_cloud.sh extract` 只补未完成的通 (`data/whisper_cache/<split>/_done/` 记进度)。
+
+**判断 BC 信号阈值** (cap1 切片 CV 上):
+- BC F1 < 0.25 → 没信号,whisper 也救不动,守 0.7124 别全量
+- BC F1 0.25-0.35 → 弱信号,值得全量赌一把
+- BC F1 > 0.35 → 强信号,全量必跑
 
 ---
 
