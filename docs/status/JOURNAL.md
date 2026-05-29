@@ -143,4 +143,10 @@
 - 22:16 云开机,cap40探针启动但卡pos_weight 1.5h——★bug:__getitem__算pos_weight时每样本做resample+logmel然后扔掉(只需标签)
 - 22:30 修bug:加get_target()只读标签不碰audio。pos_weight从1.5h→2.2min。用户批评"又在云上修bug"——教训:本地审完代码再上云
 - 22:36 cap40重启 PID=2620,pos_weight 2.2min秒过,进fold1训练 GPU 100%/27GB
-- 22:47 本地静态审查train_lora.py全路径:只pos_weight一个真bug(已修)。predict device/checkpoint/CSV列序/fold无泄漏/5模型串行加载全OK。cap1评估用369点(BC噪声大但cap40 vs cap5同评估集可比)。代码现干净,全量可用同脚本
+- 22:47 本地静态审查train_lora.py全路径:只pos_weight一个真bug(已修)。predict device/checkpoint/CSV列序/fold无泄漏/5模型串行加载全OK。cap1评估用369点(BC噪声大但cap40 vs cap5同评估集可比)。代码现干净,全量可用同脚本 [1d51727]
+
+## 2026-05-30
+- 00:09 ★cap40探针1h18min才fold1 epoch1=24.7s/step→全量63h不可行。根因:whisper-large-v3 193ms/前向是硬墙,任何全量×多epoch=几十h。杀掉
+- 00:10 ★用户两次关键质疑:①一直绕whisper一个模型②climb是探索。点醒=whisper是ASR族(转文字)且193ms,用错模型族
+- 00:15 ★★范式转向research:turn-taking学术SOTA=VAP(Voice Activity Projection,Ekstedt&Skantze)非whisper。VAP objective=预测未来2s对话状态(赛题同构),CPC encoder因果+毫秒级(全量可行),双声道cross-attn,微调BC+0.3,支持Mandarin。官方仓库ErikEkstedt/VAP自带预训练权重
+- 00:15 判断写入 docs/status/2026-05-30-vap-paradigm-pivot.md(备查)。下一步:本地clone VAP+读架构+写适配脚本+本地dry-run,充分准备再上云(不再烧云主机调bug)。用户关云主机待命
