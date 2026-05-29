@@ -162,4 +162,11 @@
 - 02:30 bug3: --folds 1时 i%1==0全进val→训练集空(速度实测会静默失败)。修=folds=1用80/20 holdout
 - 02:30 bug4: BatchNorm1d(ctx)在退化列(var=0)+小batch→nan。改LayerNorm(逐样本,无running stats)
 - 02:30 ★bug5根因(chain-first逐变量排除:输入/前向/单step/clip/CPU18step全OK→锁定):nan是MPS特有!CPU 18step干净,MPS step2就logits=nan。Apple MPS数值bug,云端CUDA无此问题
-- 02:34 ★最终CPU端到端验证通过(10通/3ep/2fold/unfreeze):无nan无skip,loss正常,cap1 CV=0.5601全类有值(C1.0/T.46/BC.20/I.25/NA.89),CSV写出。VAP脚本真正cloud-ready
+- 02:34 ★最终CPU端到端验证通过(10通/3ep/2fold/unfreeze):无nan无skip,loss正常,cap1 CV=0.5601全类有值(C1.0/T.46/BC.20/I.25/NA.89),CSV写出。VAP脚本真正cloud-ready [fa5fbf3]
+- 02:50 上云第0步:清理0残留,rsync VAP仓库(落cloud/VAP,用VAP_ROOT指定)+装einops/omegaconf/lightning
+- 02:55 ★★上云第1步CUDA实测全过:加载missing=0,★无nan(证实nan是MPS特有CUDA干净),VRAM仅0.1GB(冻结batch16),速度<6ms/段=比whisper 193ms快32x!
+- 02:55 ★全量时间终于有真数据:冻结cap20 5fold10ep~30min/cap40~59min;unfreeze cap20~89min。vs whisper 63h灾难。换对模型族的威力。下一步第2步小验证看BC信号
+- 03:00 第2步冻结smoke(40通5fold10ep,5min):macro 0.5338,但BC=0.000(冻结VAP没抓BC)。C0.987/T0.429/I0.400/NA0.853正常。冻结路线弱(早有定论),需unfreeze微调
+- 03:03 第2b步unfreeze smoke启动 PID=3745。★确认CUDA微调无nan(loss 0.76→0.46正常,CPC解冻2.17M,VRAM0.2GB)=彻底证实nan是MPS平台问题CUDA正常。1.1min/fold
+- 03:10 ★★微调信号明确(40通):冻结vs微调 BC 0.000→0.077, T 0.429→0.571, macro 0.5338→0.5777。CPC微调确实学BC(方向对)。仅40通(BC正例极少),全量369通+cap20 BC有明显上升空间(文献VAP微调BC+0.3)。决策:直接上全量unfreeze
+- 03:12 全量VAP unfreeze启动 PID=5193(369通/cap20=7380样本/10ep/5fold/win10/微调)。正常无nan,CPC解冻2.17M。预计~1.5h。出CSV后拉回提交
