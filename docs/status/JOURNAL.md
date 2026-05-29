@@ -172,3 +172,5 @@
 - 03:12 全量VAP unfreeze启动 PID=5193(369通/cap20=7380样本/10ep/5fold/win10/微调)。正常无nan,CPC解冻2.17M。预计~1.5h。出CSV后拉回提交
 - 03:27 ★BC杠杆分析:其他4类饱和(C0.97/NA0.86),BC是唯一胜负手。Macro等权→ΔBC/5全额折进。BC 0.20→0.27稳进前10/→0.30进前3线/→0.40冲榜首。文献VAP微调BC+0.3=可达0.5。最终大概率融合(LGBM基座只换BC列) [1bfa5b0]
 - 03:27 会话收口:全量VAP训练仍在跑(PID5193 fold1,nohup脱离重启后继续)。状态落盘准备重启
+- 03:48 候选模型+融合research(备查 docs/status/2026-05-30-candidate-models-fusion.md):VAP-HuBERT/MMS仓库自带零成本/CPC+HuBERT双encoder集成/HuBERT赛题离线可用(VAP作者排除是因实时约束)/动作3 LGBM鲁棒化可并行/最终融合=LGBM基座只换BC列。后面做
+- 03:48 二次收口:全量VAP fold3/5(12min/fold,预计~04:12完成)。状态+记忆全落盘,准备重启

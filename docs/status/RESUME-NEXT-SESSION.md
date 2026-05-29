@@ -78,10 +78,15 @@ python cloud/train_vap.py --convs 0 --slice-cap 20 --epochs 10 --folds 5 --win-s
 
 | 任务 | PID | 启动 | 预计 | 查 |
 |---|---|---|---|---|
-| **全量 VAP unfreeze**(369通/cap20/10ep/5fold/win10/微调) | 云 5193 | 03:12 | ~04:40 | `ssh -p 46379 root@connect.westd.seetacloud.com 'tail -15 /tmp/vap-full.log'` |
+| **全量 VAP unfreeze**(369通/cap20/10ep/5fold/win10/微调) | 云 5193 | 03:12 | ~04:12(12min/fold,03:48时fold3) | `ssh -p 46379 root@connect.westd.seetacloud.com 'tail -15 /tmp/vap-full.log'` |
 
 完成后：拉 CSV 回本机 → 用户提交 → 贴分。
 `scp -P 46379 root@connect.westd.seetacloud.com:/root/audio-classifier/tools/runs/climb/vap-full/pred_test1.csv tools/runs/climb/vap-full/`
+
+## 后面做（已记录，见 docs/status/2026-05-30-candidate-models-fusion.md）
+1. **看 VAP-CPC 全量 BC** → BC 好就**融合**(LGBM基座C/NA/T/I + 只换BC列为VAP) 提交
+2. **VAP-HuBERT / VAP-MMS**(仓库自带 encoder_hubert.py/encoder_mms.py,几乎零成本换) → CPC+HuBERT 双encoder 对BC概率平均集成。注:HuBERT双向但赛题离线可用(窗口不读未来)
+3. **动作3 LGBM集成鲁棒化**(本机~30min,独立于VAP可并行):5-fold OOF概率平均+温和阈值,加固基座 +0.003~0.006
 
 ## VAP 上云已验证（真实数据）
 - CUDA 加载/无nan/速度<6ms段(快whisper 32x)/VRAM 0.2GB
