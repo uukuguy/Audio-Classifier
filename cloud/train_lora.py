@@ -226,14 +226,17 @@ class WhisperVAPLoRA(nn.Module):
 
     def _encode_channel(self, mel: torch.Tensor) -> torch.Tensor:
         """mel [B, 128, T] → encoder → downsample → proj → [B, 80, d]."""
+        # match encoder dtype (bf16 on CUDA)
+        enc_dtype = next(self.encoder.parameters()).dtype
+        mel = mel.to(enc_dtype)
         enc = self.encoder(mel)
         h = enc.last_hidden_state  # [B, T_enc, 1280]
         # take tail CTX_SEC frames + downsample
         tail = h[:, -TAIL_FRAMES:, :]
         ds = torch.nn.functional.adaptive_avg_pool1d(
             tail.transpose(1, 2).float(), DS_FRAMES
-        ).transpose(1, 2).to(h.dtype)
-        return self.proj(ds)  # [B, 80, d]
+        ).transpose(1, 2)  # [B, 80, 1280] fp32
+        return self.proj(ds)  # [B, 80, d] fp32
 
     def forward(self, mel0: torch.Tensor, mel1: torch.Tensor, ctx: torch.Tensor) -> torch.Tensor:
         c = self.cn(ctx)
@@ -408,6 +411,11 @@ def main() -> None:
     train_ds = TurnTakingSliceDataset(conv_ids, "train", slice_cap=args.slice_cap)
     print(f"[lora] dataset size: {len(train_ds)} samples", file=sys.stderr)
 
+    # ── infer ctx_dim from data (ctxfeat output varies with label patterns) ──
+    sample_ctx = train_ds[0][2]
+    ctx_dim = sample_ctx.shape[0]
+    print(f"[lora] ctx_dim = {ctx_dim} (inferred from data)", file=sys.stderr)
+
     # ── compute pos_weight from dataset ──
     targets = np.array([train_ds[i][3].numpy() for i in range(len(train_ds))])
     pw = torch.tensor(
@@ -442,7 +450,7 @@ def main() -> None:
 
         # build encoder + LoRA (fresh per fold)
         enc = build_encoder_with_lora()
-        model = WhisperVAPLoRA(ctx_dim=80, encoder=enc)
+        model = WhisperVAPLoRA(ctx_dim=ctx_dim, encoder=enc)
 
         trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
         total_params = sum(p.numel() for p in model.parameters())
