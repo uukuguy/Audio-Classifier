@@ -174,3 +174,4 @@
 - 03:27 会话收口:全量VAP训练仍在跑(PID5193 fold1,nohup脱离重启后继续)。状态落盘准备重启
 - 03:48 候选模型+融合research(备查 docs/status/2026-05-30-candidate-models-fusion.md):VAP-HuBERT/MMS仓库自带零成本/CPC+HuBERT双encoder集成/HuBERT赛题离线可用(VAP作者排除是因实时约束)/动作3 LGBM鲁棒化可并行/最终融合=LGBM基座只换BC列。后面做
 - 03:48 二次收口:全量VAP fold3/5(12min/fold,预计~04:12完成)。状态+记忆全落盘,准备重启
+- 05:20 climb 状态迁 .claude/climb→docs/status/climb (tracked, 修 fresh clone 丢状态) + regen-tree 去 datetime 改确定性 + 加 in-flight 段 + 装 post-commit hook. 口径同 FC 全局协议改造. 不碰用户 VAP 训练/cloud 文件. [commit b2fbfce]
