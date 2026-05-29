@@ -98,3 +98,13 @@
 - 05:02 杀掉D(34min仍OOF,v2维度翻倍拖慢且会复现rank平均BC崩)。改概率平均修正集成
 - 05:52 变体E(概率平均5seed)cap1 CV=0.650:★修好C的BC崩(0.128→0.200)验证rank伤稀有类诊断。但BC仍未破0.22(LGBM瓶颈)。B/E共性硬伤:切片CV把NA阈值调0.35砸NA正例−168(NA高分来自近全正@0.25)。负结果:可信CV对近全正类调阈值仍伤,阈值铁律再验证
 - 10:27 收口commit:gen_variants+SOTA变体F+状态文件落盘(此前未commit,云端git clone拉不到) [63ac7a4]
+- 10:37 云上脚本就绪:push_code.sh(rsync,无remote走rsync)+setup_cloud.sh(解压套data/层+装torchaudio+下模型)。AutoDL 实测127G/48G显存够 [6d79c59]
+
+## 2026-05-29
+
+- 09:10 ★云端whisper真分到齐，全线falsified：smoke 0.634 / full-cycle1 0.671 / full-balanced 0.644。最高0.671远低于SOTA 0.712(-0.041)
+- 09:10 ★关键发现：whisper-large-v3冻结encoder+小cross-attn头线上0.671<纯context LGBM 0.712。gap≈0说明CV准但模型本身弱于LGBM
+- 09:10 cloud-whisper paradigm calibration: n=3, mean_gap=0.001, gaps=[-0.008,+0.019,-0.008]。SOTA仍为变体F 0.7124
+- 14:28 LoRA 微调脚本就绪(train_lora.py)，cap5切片+5fold+双优化器，待云端执行 [dfb4903]
+- 14:53 LoRA 冒烟修2 bug(ctx_dim 80→46推断+bf16/fp32 dtype)，OOM batch=16需降 [156eab4]
+- 09:10 新决策门：whisper路线已验证失败（冻结+小头不行）。下步：①微调whisper(非冻结,需更多GPU时) ②换架构/编码器 ③纯集成优化 ④守0.7124等复赛
