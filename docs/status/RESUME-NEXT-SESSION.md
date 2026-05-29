@@ -1,46 +1,52 @@
 # Next-Session Handoff
 
-**Updated:** 2026-05-29 15:46
+**Updated:** 2026-05-29 16:43
 **恢复命令：`/project-state resume`**（lightweight-memory，非 gsd）
 
 ## TL;DR
 
-1. **LoRA 冒烟正在云端跑**（~15:38 启动，预计 ~21min 完成 5 folds）。VRAM 从 OOM(46.4GB) → 1.5GB，所有修复一次到位。
-2. **冒烟完成后 = 查 log 确认结果 → 若 BC 有信号 → 跑 lora-full**。
-3. **SOTA 不变 = 变体 F 0.7124**。
+1. **LoRA 冒烟成功：BC=0.267（+20% vs LGBM 0.222），信号确认**。
+2. **LoRA 全量训练正在云端跑**（PID=8857，~16:43 启动，预计 ~21:30 完成 5 folds）。
+3. **冒烟 CSV 已拉回本机**（`tools/runs/climb/lora-smoke/pred_test1.csv`），可先提交看线上分。
+4. **SOTA 不变 = 变体 F 0.7124**。
 
-## LoRA 冒烟状态
+## Currently Running
 
-**已修问题（本次 commit b2e53d8）**:
-- gradient checkpointing：VRAM 从 46.4GB → 1.5GB（-330x）
-- gradient accumulation：micro_batch=8 × accum=2 = effective 16
-- fold 间 `.cpu()` + `empty_cache()` 释放显存
-- predict_oof 死代码清理
-- VRAM 监控每 epoch 打印
+| 任务 | PID | 启动 | 预计完成 | 查进度 |
+|---|---|---|---|---|
+| LoRA 全量训练 (369通/50ep/5fold) | 云端 8857 | 16:43 | ~21:30 | `ssh -p 46379 root@connect.westd.seetacloud.com 'tail -20 /tmp/lora-full.log'` |
 
-**冒烟参数**: 40 通, cap5(200 样本), 10ep, 5fold, batch=8, accum=2
-**冒烟观察**: fold1 loss 0.73→0.59 收敛, fold2 进行中, ~4.3min/fold
+## Next steps（按优先级）
 
-## Next steps（立即）
+1. **提交冒烟 CSV 看线上分**：`tools/runs/climb/lora-smoke/pred_test1.csv`（40通欠拟合，预期低于 SOTA 但验证 LoRA 线上表现）
+2. **等全量完成**（~21:30）→ 查 log → 拉 CSV → 提交 → 贴分
+3. **全量有信号 → 进一步优化**：①LoRA + ASL 损失 ②加 k_proj/o_proj target_modules ③增大 r
+4. **全量无信号 → 决策门**：守 0.7124 等复赛
 
-1. **查冒烟结果**: `ssh -p 46379 root@connect.westd.seetacloud.com 'tail -50 /tmp/lora-smoke.log'`
-   - 看 cap1_macro_f1 和 BC F1（frozen baseline BC=0.200, 纯 ctx LGBM=0.222）
-   - BC > 0.25 = 有信号值得全量；BC ≤ 0.22 = LoRA 也没救 BC
-2. **冒烟有信号 → 跑全量**:
-   ```bash
-   ssh -p 46379 root@connect.westd.seetacloud.com 'cd /root/audio-classifier && export PATH=/root/miniconda3/bin:$PATH && nohup bash cloud/run_cloud.sh lora-full > /tmp/lora-full.log 2>&1 & echo $!'
-   ```
-   - lora-full: 全 369 通, cap5(~1845 样本), 50ep, batch=8, accum=4 (effective=32)
-   - 预计 ~5-6h（每 fold ~1h × 5 folds）
-3. **全量出 CSV → 提交 → 贴分**
-4. **冒烟无信号 → 决策门**: ①LoRA 换 target_modules（加 k_proj/o_proj）②换更大 r ③守 0.7124 等复赛
+## 冒烟详细结果
+
+- cap1 CV macro=0.5901 | C=0.987 T=0.435 **BC=0.267** I=0.400 NA=0.862
+- BC 突破确认（frozen=0.200, ctx LGBM=0.222）
+- T/I 比 LGBM 差（40 通欠拟合），全量应补回
 
 ## 云端环境
 
 - AutoDL 4090 在线，SSH: `ssh -p 46379 root@connect.westd.seetacloud.com`
-- peft 0.19.1 已装，gradient checkpointing 确认生效
-- 代码已推（train_lora.py + run_cloud.sh, commit b2e53d8）
-- 冒烟 log: `/tmp/lora-smoke.log`，全量 log 将写 `/tmp/lora-full.log`
+- 全量 log: `/tmp/lora-full.log`，checkpoint: `tools/runs/climb/lora-full/fold{N}.pt`
+- 每 fold 完成自动保存 checkpoint（修复后）
+
+## Ready commands
+
+```bash
+# 查全量进度
+ssh -p 46379 root@connect.westd.seetacloud.com 'tail -20 /tmp/lora-full.log'
+# 查是否完成
+ssh -p 46379 root@connect.westd.seetacloud.com 'kill -0 8857 2>/dev/null && echo RUNNING || echo DONE'
+# 拉全量 CSV
+scp -P 46379 root@connect.westd.seetacloud.com:/root/audio-classifier/tools/runs/climb/lora-full/pred_test1.csv tools/runs/climb/lora-full/
+# 推代码
+rsync -avz -e "ssh -p 46379" cloud/ root@connect.westd.seetacloud.com:/root/audio-classifier/cloud/
+```
 
 ## climb 假设池
 

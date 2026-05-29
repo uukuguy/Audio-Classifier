@@ -111,3 +111,7 @@
 - 09:10 新决策门：whisper路线已验证失败（冻结+小头不行）。下步：①微调whisper(非冻结,需更多GPU时) ②换架构/编码器 ③纯集成优化 ④守0.7124等复赛
 - 15:34 fix(lora): 通盘修OOM — gradient checkpointing + grad accumulation + fold间VRAM释放 + predict_oof死代码 [b2e53d8]
 - 15:38 LoRA冒烟启动云端：VRAM 1.5/4.5GB(从46.4GB OOM降330x)，fold1 loss 0.73→0.59收敛正常，~4.3min/fold
+- 16:08 LoRA冒烟完成5fold：BC=0.267(突破！vs frozen 0.200/ctx LGBM 0.222)，macro=0.5896。但predict_test crash(CPU/CUDA BN错位)且无checkpoint保存=白跑
+- 16:10 修2 bug(predict_test加.to(DEV)+每fold保存checkpoint)，重跑冒烟 PID=6266 ~22min
+- 16:32 LoRA冒烟v2成功：BC=0.267确认，macro=0.5901，checkpoint+CSV全出。commit修复+拉CSV回本机
+- 16:43 LoRA全量启动(369通/cap5/50ep/5fold/batch8×4=32) PID=8857，预计~5-6h(~21:30完成)

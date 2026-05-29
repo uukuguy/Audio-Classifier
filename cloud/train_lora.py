@@ -391,6 +391,7 @@ def predict_test(
     loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False,
                         collate_fn=collate_variable_mel, num_workers=2, pin_memory=True)
     for m in models:
+        m.to(DEV)          # model may be on CPU after fold cleanup
         m.eval()
         fold_probs = []
         with torch.no_grad():
@@ -502,9 +503,13 @@ def main() -> None:
         dt = time.time() - t_fold
         print(f"[lora] fold {fi+1} done in {dt/60:.1f}min", file=sys.stderr)
 
+        # Save fold checkpoint (survives crash, avoids re-training)
+        ckpt_path = run / f"fold{fi}.pt"
+        torch.save(model.state_dict(), ckpt_path)
+        print(f"[lora] saved {ckpt_path}", file=sys.stderr)
+
         # Free previous fold's VRAM (except last fold kept for test prediction)
         if fi < args.folds - 1:
-            # Move model to CPU to free GPU memory for next fold
             models[-1] = models[-1].cpu()
             torch.cuda.empty_cache()
 
