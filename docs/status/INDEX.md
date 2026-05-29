@@ -12,6 +12,7 @@
 | `JOURNAL.md` | append-only 事件日志 | 🟢 active |
 | `research-tree.md` | climb 战略可视化（generated，1 confirmed/9 falsified） | 🟢 active |
 | `2026-05-28-sliced-cv-audit.md` | 切片化验证集审计：cap1 可信 CV(gap+0.118→+0.055)，BC 真瓶颈非假象 | 🟢 active |
+| `2026-05-29-lora-finetune-plan.md` | LoRA 微调 whisper-large-v3 攻 BC 方案（冻结路线 falsified 后的下一步） | 🟢 active |
 
 ## 跨会话记忆（MEMORY，恢复入口）
 

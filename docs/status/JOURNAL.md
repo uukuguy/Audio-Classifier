@@ -107,4 +107,7 @@
 - 09:10 cloud-whisper paradigm calibration: n=3, mean_gap=0.001, gaps=[-0.008,+0.019,-0.008]。SOTA仍为变体F 0.7124
 - 14:28 LoRA 微调脚本就绪(train_lora.py)，cap5切片+5fold+双优化器，待云端执行 [dfb4903]
 - 14:53 LoRA 冒烟修2 bug(ctx_dim 80→46推断+bf16/fp32 dtype)，OOM batch=16需降 [156eab4]
+- 14:56 handoff更新：LoRA冒烟卡OOM，下次降batch_size=4重跑 [f87b5b1]
 - 09:10 新决策门：whisper路线已验证失败（冻结+小头不行）。下步：①微调whisper(非冻结,需更多GPU时) ②换架构/编码器 ③纯集成优化 ④守0.7124等复赛
+- 15:34 fix(lora): 通盘修OOM — gradient checkpointing + grad accumulation + fold间VRAM释放 + predict_oof死代码 [b2e53d8]
+- 15:38 LoRA冒烟启动云端：VRAM 1.5/4.5GB(从46.4GB OOM降330x)，fold1 loss 0.73→0.59收敛正常，~4.3min/fold
