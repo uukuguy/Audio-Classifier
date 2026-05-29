@@ -149,4 +149,10 @@
 - 00:09 ★cap40探针1h18min才fold1 epoch1=24.7s/step→全量63h不可行。根因:whisper-large-v3 193ms/前向是硬墙,任何全量×多epoch=几十h。杀掉
 - 00:10 ★用户两次关键质疑:①一直绕whisper一个模型②climb是探索。点醒=whisper是ASR族(转文字)且193ms,用错模型族
 - 00:15 ★★范式转向research:turn-taking学术SOTA=VAP(Voice Activity Projection,Ekstedt&Skantze)非whisper。VAP objective=预测未来2s对话状态(赛题同构),CPC encoder因果+毫秒级(全量可行),双声道cross-attn,微调BC+0.3,支持Mandarin。官方仓库ErikEkstedt/VAP自带预训练权重
-- 00:15 判断写入 docs/status/2026-05-30-vap-paradigm-pivot.md(备查)。下一步:本地clone VAP+读架构+写适配脚本+本地dry-run,充分准备再上云(不再烧云主机调bug)。用户关云主机待命
+- 00:15 判断写入 docs/status/2026-05-30-vap-paradigm-pivot.md(备查)。下一步:本地clone VAP+读架构+写适配脚本+本地dry-run,充分准备再上云(不再烧云主机调bug)。用户关云主机待命 [d56ef49]
+- 00:20 clone VAP到baselines/(gitignored)。读架构:VAP.forward(wave[B,2,N])→out['x']双声道cross-attn融合帧序列。CPC dim256/16k/50Hz/causal,可unfreeze微调。TransformerStereo=AliBi+causal mask(满足因果)
+- 00:24 关键资产:example/checkpoints/VAP_state_dict.pt(23MB真文件,含CPC权重)。加载路径:EncoderCPC(load_pretrained=F)+VAP+load_state_dict绕过单独CPC权重
+- 00:26 ★本机dry-run成功(上云前首次投入前验证通过):VAP加载missing=0/unexpected=0,前向1s双声道16k→out['x']=[1,50,256]确认50Hz。架构/加载/前向/帧率全验证。30s→1500帧,未来2s=100帧,接5类头取预测点帧
+- 00:35 CPU实测:VAP 30s双声道1603ms(1500帧O(T^2)attention)。优化=取末win-sec窗(预测点在末尾,因果)。GPU估15-25x→10s窗~20-30ms/段→全量cap20 5fold10ep~17min(vs whisper 63h)
+- 00:45 写cloud/train_vap.py:VAP backbone+ctx融合(46维)+5类头,取out['x']末pool帧。CPC默认冻结,--unfreeze微调。pos_weight labels-only(无1.5h bug)。weights_only=True(security)
+- 00:47 ★★本机完整dry-run通过(3通/cap2/1ep/2fold/8s):加载/VAP前向/头/loss/反向/checkpoint/test预测/CSV全跑通。CSV格式对(6列segment_id,c,na,i,bc,t/1000段/0-1)。这次上云前就验证好了,不再云上调bug
