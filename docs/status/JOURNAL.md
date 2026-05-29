@@ -155,4 +155,11 @@
 - 00:26 ★本机dry-run成功(上云前首次投入前验证通过):VAP加载missing=0/unexpected=0,前向1s双声道16k→out['x']=[1,50,256]确认50Hz。架构/加载/前向/帧率全验证。30s→1500帧,未来2s=100帧,接5类头取预测点帧
 - 00:35 CPU实测:VAP 30s双声道1603ms(1500帧O(T^2)attention)。优化=取末win-sec窗(预测点在末尾,因果)。GPU估15-25x→10s窗~20-30ms/段→全量cap20 5fold10ep~17min(vs whisper 63h)
 - 00:45 写cloud/train_vap.py:VAP backbone+ctx融合(46维)+5类头,取out['x']末pool帧。CPC默认冻结,--unfreeze微调。pos_weight labels-only(无1.5h bug)。weights_only=True(security)
-- 00:47 ★★本机完整dry-run通过(3通/cap2/1ep/2fold/8s):加载/VAP前向/头/loss/反向/checkpoint/test预测/CSV全跑通。CSV格式对(6列segment_id,c,na,i,bc,t/1000段/0-1)。这次上云前就验证好了,不再云上调bug
+- 00:47 ★★本机完整dry-run通过(3通/cap2/1ep/2fold/8s):加载/VAP前向/头/loss/反向/checkpoint/test预测/CSV全跑通。CSV格式对(6列segment_id,c,na,i,bc,t/1000段/0-1)。这次上云前就验证好了,不再云上调bug [3379ab0]
+- 02:30 ★用户要求上云前彻底排查"别又云上修bug"。本地静态审查+dry-run逐路径,抓到5个问题:
+- 02:30 bug1: predict_test 5个fold模型不释放显存(unfreeze全量会爆)→逐模型用完.cpu()+empty_cache
+- 02:30 bug2: --unfreeze粗暴解冻所有参数→alibi self.m(设计为不可训练)被解冻→get_alibi_mask的requires_grad_崩。修=只解冻CPC encoder(也是更对的微调策略)
+- 02:30 bug3: --folds 1时 i%1==0全进val→训练集空(速度实测会静默失败)。修=folds=1用80/20 holdout
+- 02:30 bug4: BatchNorm1d(ctx)在退化列(var=0)+小batch→nan。改LayerNorm(逐样本,无running stats)
+- 02:30 ★bug5根因(chain-first逐变量排除:输入/前向/单step/clip/CPU18step全OK→锁定):nan是MPS特有!CPU 18step干净,MPS step2就logits=nan。Apple MPS数值bug,云端CUDA无此问题
+- 02:34 ★最终CPU端到端验证通过(10通/3ep/2fold/unfreeze):无nan无skip,loss正常,cap1 CV=0.5601全类有值(C1.0/T.46/BC.20/I.25/NA.89),CSV写出。VAP脚本真正cloud-ready

@@ -59,6 +59,9 @@ VAP_HZ = 50           # VAP frame rate (20ms/frame)
 SEED = 42
 torch.manual_seed(SEED)
 np.random.seed(SEED)
+# NOTE: MPS produces nan from step 2 (Apple MPS numerical bug in CPC conv/attn,
+# confirmed 2026-05-30: CPU 18 steps clean, MPS step2 logits=nan). Use CUDA on cloud,
+# or CPU locally. Do NOT trust MPS numerics for this model.
 DEV = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
 
 VAP_CKPT = os.environ.get("VAP_CKPT", str(Path(VAP_ROOT) / "example/checkpoints/VAP_state_dict.pt"))
@@ -79,14 +82,23 @@ def build_vap(unfreeze: bool = False) -> nn.Module:
     missing, unexpected = model.load_state_dict(sd, strict=False)
     print(f"[vap] loaded {VAP_CKPT}: missing={len(missing)} unexpected={len(unexpected)}",
           file=sys.stderr)
+    # Always start fully frozen.
+    for p in model.parameters():
+        p.requires_grad_(False)
     if unfreeze:
-        for p in model.parameters():
+        # Unfreeze ONLY the CPC encoder (audio representation adaptation).
+        # Do NOT unfreeze the stereo transformer: its alibi slopes `self.m` are
+        # designed non-trainable (modules.py:128) and a blanket unfreeze makes the
+        # computed alibi mask a non-leaf tensor → get_alibi_mask's requires_grad_(False)
+        # crashes ("can only change requires_grad flags of leaf variables").
+        # Caught locally before cloud (2026-05-30). Encoder-only fine-tune is also the
+        # right strategy: adapt representation, keep turn-taking transformer intact.
+        for p in model.encoder.parameters():
             p.requires_grad_(True)
-        print("[vap] FULL model trainable (unfrozen)", file=sys.stderr)
+        n_tr = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        print(f"[vap] CPC encoder unfrozen ({n_tr:,} trainable); transformer frozen", file=sys.stderr)
     else:
-        for p in model.parameters():
-            p.requires_grad_(False)
-        print("[vap] VAP frozen (only head trains)", file=sys.stderr)
+        print("[vap] VAP fully frozen (only head trains)", file=sys.stderr)
     return model
 
 
@@ -199,7 +211,11 @@ class VAPTurnTaking(nn.Module):
         super().__init__()
         self.vap = vap
         self.pool_frames = pool_frames  # mean-pool last M frames at prediction point
-        self.cn = nn.BatchNorm1d(ctx_dim)
+        # LayerNorm (not BatchNorm1d): ctx is a feature vector of statistics with
+        # constant/degenerate columns (var=0). BatchNorm on those + small batches
+        # produces nan in training (caught locally 2026-05-30). LayerNorm is per-sample,
+        # no running stats, robust to degenerate dims.
+        self.cn = nn.LayerNorm(ctx_dim)
         fin = ctx_dim + vap_dim
         self.head = nn.Sequential(
             nn.LayerNorm(fin),
@@ -227,9 +243,12 @@ def train_fold(model, ds, tr_idx, epochs, pw, batch_size, lr_head, lr_vap, unfre
         groups.append({"params": vap_params, "lr": lr_vap, "weight_decay": 0.01})
     opt = torch.optim.AdamW(groups)
     crit = nn.BCEWithLogitsLoss(pos_weight=pw)
+    # drop_last avoids a trailing size-1 batch that makes BatchNorm1d produce nan.
     loader = DataLoader(ds, batch_size=batch_size,
                         sampler=torch.utils.data.SubsetRandomSampler(tr_idx),
-                        collate_fn=collate, num_workers=2, pin_memory=(DEV == "cuda"))
+                        collate_fn=collate, num_workers=2, pin_memory=(DEV == "cuda"),
+                        drop_last=(len(tr_idx) > batch_size))
+    n_skip = 0
     for ep in range(epochs):
         model.train()
         tot, nb = 0.0, 0
@@ -237,6 +256,9 @@ def train_fold(model, ds, tr_idx, epochs, pw, batch_size, lr_head, lr_vap, unfre
             wav, ctx, tgt = wav.to(DEV), ctx.to(DEV), tgt.to(DEV)
             logits = model(wav, ctx)
             loss = crit(logits, tgt)
+            if not torch.isfinite(loss):  # skip degenerate batch, don't poison weights
+                n_skip += 1
+                continue
             opt.zero_grad()
             loss.backward()
             torch.nn.utils.clip_grad_norm_([p for g in groups for p in g["params"]], 1.0)
@@ -244,7 +266,8 @@ def train_fold(model, ds, tr_idx, epochs, pw, batch_size, lr_head, lr_vap, unfre
             tot += float(loss); nb += 1
         if ep == 0 or (ep + 1) % 5 == 0 or ep == epochs - 1:
             vram = torch.cuda.memory_allocated() / 1024**3 if DEV == "cuda" else 0
-            print(f"[vap]   epoch {ep+1}/{epochs} loss={tot/max(1,nb):.4f} VRAM={vram:.1f}GB",
+            print(f"[vap]   epoch {ep+1}/{epochs} loss={tot/max(1,nb):.4f} VRAM={vram:.1f}GB"
+                  + (f" (skipped {n_skip} nan batches)" if n_skip else ""),
                   file=sys.stderr)
     model.eval()
     return model
@@ -275,6 +298,10 @@ def predict_test(models, test_ds, batch_size=32):
             wav, ctx = wav.to(DEV), ctx.to(DEV)
             fp.append(torch.sigmoid(m(wav, ctx)).cpu().numpy())
         probs += np.concatenate(fp, axis=0)
+        # release this model's VRAM before loading the next (avoid 5-model pileup)
+        m.cpu()
+        if DEV == "cuda":
+            torch.cuda.empty_cache()
     return probs / len(models)
 
 
@@ -328,7 +355,13 @@ def main() -> None:
     t_total = time.time()
     for fi in range(args.folds):
         t0 = time.time()
-        val_convs = {conv_perm[i] for i in range(n_convs) if i % args.folds == fi}
+        if args.folds == 1:
+            # folds=1 (speed/quick run): i%1==0 would put ALL convs in val → empty
+            # train. Use a 80/20 holdout instead (last 20% of shuffled convs = val).
+            n_val = max(1, n_convs // 5)
+            val_convs = {conv_perm[i] for i in range(n_convs - n_val, n_convs)}
+        else:
+            val_convs = {conv_perm[i] for i in range(n_convs) if i % args.folds == fi}
         tr_idx = [i for i in range(len(train_ds)) if sample_groups[i] not in val_convs]
         va_idx = [i for i in range(len(train_ds)) if sample_groups[i] in val_convs]
         print(f"[vap] fold {fi+1}/{args.folds}: train={len(tr_idx)} val={len(va_idx)}", file=sys.stderr)
