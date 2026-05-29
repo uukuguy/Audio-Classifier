@@ -37,13 +37,13 @@ case "$MODE" in
   lora-smoke)
     RUN_DIR="${RUN_DIR:-tools/runs/climb/lora-smoke}"
     echo "=== [run_cloud] LoRA smoke (40 convs, cap5, 10ep) ==="
-    python3 cloud/train_lora.py --convs 40 --epochs 10 --slice-cap 5 --batch-size 16 \
+    python3 cloud/train_lora.py --convs 40 --epochs 10 --slice-cap 5 --batch-size 8 --grad-accum 2 \
       --run-dir "$RUN_DIR"
     ;;
   lora-full)
     RUN_DIR="${RUN_DIR:-tools/runs/climb/lora-full}"
     echo "=== [run_cloud] LoRA full (all convs, cap5, 50ep) ==="
-    python3 cloud/train_lora.py --convs 0 --epochs 50 --slice-cap 5 --batch-size 32 \
+    python3 cloud/train_lora.py --convs 0 --epochs 50 --slice-cap 5 --batch-size 8 --grad-accum 4 \
       --run-dir "$RUN_DIR"
     ;;
   *)

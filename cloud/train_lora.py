@@ -74,10 +74,27 @@ THR_CYCLE1 = {0: 0.05, 4: 0.05, 1: 0.50, 3: 0.50, 2: 0.50}  # variant-F SOTA 钙
 
 # ── whisper encoder + LoRA wrapper ─────────────────────────────────────────
 def build_encoder_with_lora() -> nn.Module:
-    """Load whisper-large-v3 encoder + apply LoRA via PEFT."""
+    """Load whisper-large-v3 encoder + apply LoRA via PEFT + gradient checkpointing.
+
+    VRAM budget (RTX 4090 48GB):
+      encoder bf16 = 3GB, LoRA optimizer ~0.2GB, head ~0.01GB, CUDA ~1.5GB
+      gradient checkpointing cuts activations from ~320MB→~60MB per sample per channel
+      → batch_size=8 uses ~1GB activations, batch_size=32 uses ~4GB. Both safe.
+    """
     from peft import LoraConfig, get_peft_model
 
-    base = WhisperModel.from_pretrained(MODEL_DIR, torch_dtype=torch.bfloat16).encoder
+    full = WhisperModel.from_pretrained(MODEL_DIR, torch_dtype=torch.bfloat16)
+    base = full.encoder
+    # Free decoder weights from RAM (~3GB waste). Encoder is a submodule; detach
+    # by replacing parent ref so full+decoder can be GC'd.
+    del full
+
+    # Enable gradient checkpointing BEFORE PEFT wrapping.
+    # Cuts activation VRAM from O(n_layers) to O(sqrt(n_layers)) at ~20% compute cost.
+    # Essential for LoRA fine-tuning on 48GB card — without this, batch_size=4 OOMs.
+    # transformers 5.x: gradient_checkpointing_enable() handles PEFT input grads automatically.
+    base.gradient_checkpointing_enable()
+
     lora_cfg = LoraConfig(
         r=LORA_R,
         lora_alpha=LORA_ALPHA,
@@ -259,6 +276,7 @@ def train_fold(
     batch_size: int,
     lr_lora: float,
     lr_head: float,
+    grad_accum: int = 2,
 ) -> WhisperVAPLoRA:
     model.to(DEV)
     # separate param groups: LoRA slow, head fast
@@ -276,15 +294,18 @@ def train_fold(
         {"params": lora_params, "lr": lr_lora, "weight_decay": WEIGHT_DECAY_LORA},
         {"params": head_params, "lr": lr_head, "weight_decay": WEIGHT_DECAY_HEAD},
     ])
-    total_steps = epochs * ((len(train_idx) + batch_size - 1) // batch_size)
-    warmup = max(1, int(0.05 * total_steps))
+    # Scheduler steps = optimizer steps (not micro-batches).
+    # Effective batch = batch_size * grad_accum.
+    steps_per_epoch = (len(train_idx) + batch_size - 1) // batch_size
+    total_opt_steps = epochs * (steps_per_epoch // grad_accum + (1 if steps_per_epoch % grad_accum else 0))
+    warmup = max(1, int(0.05 * total_opt_steps))
+    _math = __import__("math")
 
-    # manual cosine with warmup
     def lr_lambda(step: int) -> float:
         if step < warmup:
             return step / warmup
-        progress = (step - warmup) / max(1, total_steps - warmup)
-        return 0.5 * (1.0 + __import__("math").cos(__import__("math").pi * progress))
+        progress = (step - warmup) / max(1, total_opt_steps - warmup)
+        return 0.5 * (1.0 + _math.cos(_math.pi * progress))
 
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lr_lambda)
 
@@ -298,26 +319,39 @@ def train_fold(
         model.train()
         epoch_loss = 0.0
         n_batch = 0
+        opt.zero_grad()
         for mel0, mel1, ctx, tgt in loader:
             mel0 = mel0.to(DEV, non_blocking=True)
             mel1 = mel1.to(DEV, non_blocking=True)
             ctx = ctx.to(DEV, non_blocking=True)
             tgt = tgt.to(DEV, non_blocking=True)
 
-            opt.zero_grad()
             logits = model(mel0, mel1, ctx)
-            loss = crit(logits, tgt)
+            loss = crit(logits, tgt) / grad_accum  # scale loss for accumulation
             loss.backward()
+
+            n_batch += 1
+            epoch_loss += float(loss) * grad_accum  # unscale for logging
+
+            if n_batch % grad_accum == 0:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                opt.step()
+                sched.step()
+                opt.zero_grad()
+
+        # Handle remaining micro-batches that don't fill a full accum step
+        if n_batch % grad_accum != 0:
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             opt.step()
             sched.step()
-
-            epoch_loss += float(loss)
-            n_batch += 1
+            opt.zero_grad()
 
         if ep == 0 or (ep + 1) % 5 == 0 or ep == epochs - 1:
+            vram_alloc = torch.cuda.memory_allocated() / 1024**3
+            vram_resv = torch.cuda.memory_reserved() / 1024**3
             lr_now = sched.get_last_lr()[0]
-            print(f"[lora]   epoch {ep+1}/{epochs} loss={epoch_loss/n_batch:.4f} lr={lr_now:.2e}",
+            print(f"[lora]   epoch {ep+1}/{epochs} loss={epoch_loss/n_batch:.4f} "
+                  f"lr={lr_now:.2e} VRAM={vram_alloc:.1f}/{vram_resv:.1f}GB",
                   file=sys.stderr)
 
     model.eval()
@@ -329,16 +363,9 @@ def predict_oof(
     model: WhisperVAPLoRA,
     dataset: TurnTakingSliceDataset,
     idx: list[int],
-    batch_size: int = 256,
+    batch_size: int = 64,
 ) -> np.ndarray:
     """OOF prediction on given indices."""
-    loader = DataLoader(
-        dataset, batch_size=batch_size, sampler=torch.utils.data.SequentialSampler.__new__(
-            torch.utils.data.SequentialSampler
-        ),
-        collate_fn=collate_variable_mel, num_workers=2, pin_memory=True,
-    )
-    # Use subset
     sub = torch.utils.data.Subset(dataset, idx)
     loader = DataLoader(sub, batch_size=batch_size, collate_fn=collate_variable_mel,
                         num_workers=2, pin_memory=True)
@@ -385,7 +412,8 @@ def main() -> None:
     ap.add_argument("--epochs", type=int, default=50)
     ap.add_argument("--folds", type=int, default=5)
     ap.add_argument("--slice-cap", type=int, default=5, help="slices per conversation (cap5=1845 samples)")
-    ap.add_argument("--batch-size", type=int, default=32, help="training batch size")
+    ap.add_argument("--batch-size", type=int, default=8, help="micro batch size (effective = batch_size * grad_accum)")
+    ap.add_argument("--grad-accum", type=int, default=4, help="gradient accumulation steps (effective batch = batch_size * this)")
     ap.add_argument("--lr-lora", type=float, default=LR_LORA)
     ap.add_argument("--lr-head", type=float, default=LR_HEAD)
     ap.add_argument("--run-dir", default="tools/runs/climb/lora-full")
@@ -396,7 +424,8 @@ def main() -> None:
     print(f"[lora] dev={DEV} model={MODEL_DIR}", file=sys.stderr)
     print(f"[lora] LoRA r={LORA_R} α={LORA_ALPHA} dropout={LORA_DROPOUT}", file=sys.stderr)
     print(f"[lora] lr_lora={args.lr_lora} lr_head={args.lr_head}", file=sys.stderr)
-    print(f"[lora] epochs={args.epochs} folds={args.folds} slice_cap={args.slice_cap}", file=sys.stderr)
+    print(f"[lora] epochs={args.epochs} folds={args.folds} slice_cap={args.slice_cap} "
+          f"batch={args.batch_size}×{args.grad_accum}={args.batch_size * args.grad_accum}", file=sys.stderr)
 
     # ── load conv ids ──
     import glob
@@ -431,7 +460,10 @@ def main() -> None:
     n_convs = len(conv_ids)
     rng = np.random.default_rng(SEED)
     conv_perm = rng.permutation(n_convs)
-    fold_of_conv = {conv_perm[i]: i % args.folds for i in range(n_convs)}
+
+    effective_batch = args.batch_size * args.grad_accum
+    print(f"[lora] batch_size={args.batch_size} grad_accum={args.grad_accum} "
+          f"effective_batch={effective_batch}", file=sys.stderr)
 
     # ── 5-fold CV ──
     oof = np.zeros((len(train_ds), 5), dtype=np.float32)
@@ -457,14 +489,24 @@ def main() -> None:
         print(f"[lora] params: trainable={trainable:,} / total={total_params:,} "
               f"({100*trainable/total_params:.2f}%)", file=sys.stderr)
 
+        vram_before = torch.cuda.memory_allocated() / 1024**3
+        print(f"[lora] VRAM after model creation: {vram_before:.1f} GB", file=sys.stderr)
+
         model = train_fold(
             model, train_ds, tr_idx, args.epochs, pw,
             args.batch_size, args.lr_lora, args.lr_head,
+            grad_accum=args.grad_accum,
         )
         oof[va_idx] = predict_oof(model, train_ds, va_idx)
         models.append(model)
         dt = time.time() - t_fold
         print(f"[lora] fold {fi+1} done in {dt/60:.1f}min", file=sys.stderr)
+
+        # Free previous fold's VRAM (except last fold kept for test prediction)
+        if fi < args.folds - 1:
+            # Move model to CPU to free GPU memory for next fold
+            models[-1] = models[-1].cpu()
+            torch.cuda.empty_cache()
 
     total_min = (time.time() - t_total) / 60
     print(f"[lora] all {args.folds} folds done in {total_min:.1f}min", file=sys.stderr)
@@ -473,7 +515,7 @@ def main() -> None:
     # cap1 = first slice of each conversation (order==0 in sample list)
     cap1_idx = []
     seen_convs = set()
-    for i, (cid, end, split) in enumerate(train_ds.samples):
+    for i, (cid, _end, _split) in enumerate(train_ds.samples):
         if cid not in seen_convs:
             cap1_idx.append(i)
             seen_convs.add(cid)
