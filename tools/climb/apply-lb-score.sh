@@ -114,3 +114,14 @@ PY_BIN="${CLIMB_PY:-python3}"
 if [ -f "$ROOT/tools/climb/regen-tree.py" ]; then
   "$PY_BIN" "$ROOT/tools/climb/regen-tree.py" >/dev/null 2>&1 && echo "[climb-lb] research-tree synced" || echo "[climb-lb] WARN: regen-tree failed"
 fi
+
+# --- 确定性 target gate (climb.md §4.1): LB 落可能让 target 达成 → emit PAUSE ---
+if [ -f "$ROOT/tools/climb/check-target.py" ]; then
+  TGT=$("$PY_BIN" "$ROOT/tools/climb/check-target.py" 2>/dev/null); RC=$?
+  if [ "$RC" = "10" ]; then
+    echo ""
+    echo "🎯🎯🎯 [climb-lb] TARGET MET (LB 真分越阈) — climb.md §4.1 Hard Pause 🎯🎯🎯"
+    echo "$TGT" | "$PY_BIN" -c "import sys,json; print('  '+json.load(sys.stdin).get('reason',''))" 2>/dev/null || echo "  $TGT"
+    echo "  → 写 handoff 汇报成果, 暂停等用户讨论下一档."
+  fi
+fi

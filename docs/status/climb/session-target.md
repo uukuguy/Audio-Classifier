@@ -52,3 +52,8 @@
 - created_at: 2026-05-27T16:10:00
 - session_id: 2026-05-27-climb-init（will rotate per /clear）
 - phase: 启用完成，待跑首个 cycle
+
+<!-- TARGET-BEGIN (机器可读, check-target.py 读; LB 落/cycle 末自动判定 §4.1) -->
+target_metric: online
+target_value: 0.7357
+<!-- TARGET-END -->
