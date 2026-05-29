@@ -9,7 +9,7 @@
 #     CONTEXT_FILE — path to context file (recent calibration / hypothesis / etc)
 #   Output:
 #     stdout JSON: {"claude": "PUSH|SKIP|PIVOT", "gemini": "...", "opencode": "...", "vote": "<majority>"}
-#     Side effect: append entry to .claude/climb/adjudicator-log.md
+#     Side effect: append entry to docs/status/climb/adjudicator-log.md
 #   Exit code:
 #     0 = all 3 consulted (even if some timeout, parse partial)
 #     1 = >1 AI unreachable

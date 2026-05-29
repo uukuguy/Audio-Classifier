@@ -1,0 +1,33 @@
+# climb adapter config — Audio-Classifier / FinVCup 2026 turn-taking
+# climb.md (项目无关执行手册) 读这个文件决定项目特定行为。改这里不改 climb.md。
+
+score_name: Macro-F1
+score_direction: max
+subscores: [c, na, t, i, bc]          # 5 类逐类 F1（提交 CSV 列名小写，顺序同 multi_targets）
+push_mode: manual-csv                  # 公榜每天 2 次提交、手动提交 + 手动贴分
+state_dir: docs/status/climb           # climb 状态根（git-tracked — 2026-05-30 从 .claude/climb 迁出，修 fresh clone 丢状态）
+artifact_dir: tools/runs/climb         # climb 训练产物根（gitignored，per-cycle 时间戳子目录）
+run_tag_marker: -climb-                # 提交工件/ckpt 文件名含此标记区分 climb vs 手动
+paradigm_field: parent_paradigm        # 本项目 paradigm = 编码器/架构组合（非 RL 算法）
+
+# manual-csv 提交约束
+submit:
+  cadence: 5/day                       # 公榜每天 5 次提交机会（5/27 用户更正）
+  csv_format: "segment_id,c,na,i,bc,t" # 列名小写，0/1
+  csv_path_glob: tools/runs/climb/*/pred_test1.csv
+  rule: "提交是用户的事，climb 不挑/不催。climb 只管自主推进产候选 CSV + 报 CV 预估，记 pending-lb。用户自行决定提交哪些、何时提交，贴回真分 climb 即校准。"
+
+# SOTA 锚点（排行榜，2026-05-27）
+sota:
+  best_online: null                    # 我们自己还没提交过；榜首 0.747489
+  leaderboard: { top1: 0.747489, top3: 0.73568, top10: 0.719176 }
+  goal: "前3 ≥0.7357 / 保底前10 ≥0.7192"
+
+# calibration 语义：gap = 公榜 Macro-F1 − 本地 OOF CV Macro-F1
+calibration_note: "本地 CV 用按会话划分 + 30s 切片化验证集（防滑窗乐观偏差）。gap 校准 CV→公榜。"
+
+# 资源
+resources:
+  dev: "MBP M3 Max 128GB (MPS) — EDA/冒烟/调试/纯上下文 LGBM"
+  train: "云 GPU (A100/4090) — 大编码器正式训练"
+  note: "复赛镜像须 CUDA 验证"

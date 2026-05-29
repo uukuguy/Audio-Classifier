@@ -1,0 +1,69 @@
+{
+  "_schema_version": 1,
+  "_description": "Per-paradigm calibration: gap = 公榜 Macro-F1 − 本地 OOF CV Macro-F1. Updated on every LB paste.",
+  "_subscores": [
+    "c",
+    "na",
+    "t",
+    "i",
+    "bc"
+  ],
+  "paradigms": {
+    "context-only": {
+      "n_samples": 5,
+      "mean_gap": 0.067,
+      "std_gap": 0.0144,
+      "last_3_gaps": [
+        0.0912,
+        0.072,
+        0.045
+      ],
+      "last_updated": "2026-05-28T06:20:13",
+      "_note": "n=5: cycle1线上0.7108 / v2 0.6833 / F(5seed概率平均+cycle1阈值)0.7124=NEW SOTA / B(切片阈值)0.6930砸NA / C(rank平均)0.6413 BC崩。★三大铁律实测确认。cap1切片CV gap~0.07但'CV高分≠线上高分'"
+    },
+    "cloud-whisper-large-v3-vap": {
+      "n_samples": 3,
+      "mean_gap": 0.001,
+      "std_gap": 0.014,
+      "last_3_gaps": [
+        -0.0075,
+        0.0188,
+        -0.0084
+      ],
+      "last_updated": "2026-05-29T08:51:31",
+      "_note": "n=3: smoke 0.634(40通CV0.641,gap-0.008) / full-cycle1 0.671(全量CV0.652,gap+0.019) / full-balanced 0.644(BC阈值0.4,gap-0.008)。★关键发现：whisper端到端线上远低于纯context LGBM(0.671 vs 0.712=-0.041)。gap≈0=CV准但CV本身就低。whisper神经头(cap1切片CV训练)不如纯context LGBM"
+    },
+    "baseline-enhanced": {
+      "n_samples": 0,
+      "mean_gap": null,
+      "std_gap": null,
+      "last_3_gaps": [],
+      "last_updated": null,
+      "_note": "修 baseline 漏分点（阈值/ASL/音频保序列）"
+    },
+    "vap-stereo": {
+      "n_samples": 0,
+      "mean_gap": null,
+      "std_gap": null,
+      "last_3_gaps": [],
+      "last_updated": null,
+      "_note": "双声道 cross-attention 冻结编码器 VAP 式"
+    },
+    "ensemble": {
+      "n_samples": 0,
+      "mean_gap": null,
+      "std_gap": null,
+      "last_3_gaps": [],
+      "last_updated": null,
+      "_note": "多 paradigm rank 平均集成"
+    },
+    "unknown": {
+      "n_samples": 0,
+      "mean_gap": null,
+      "std_gap": null,
+      "last_3_gaps": [],
+      "last_updated": null,
+      "_note": ""
+    }
+  }
+}

@@ -4,7 +4,7 @@
 # 本项目公榜手动提交（每天 2 次）。push.sh 不自动提交，只:
 #   1. 确认 run 目录里有 pred_test1.csv（可提交工件）
 #   2. 校验 CSV 格式（segment_id,c,na,i,bc,t；1000 行 0/1）
-#   3. 把 run 登记到 .claude/climb/pending-lb.json
+#   3. 把 run 登记到 docs/status/climb/pending-lb.json
 #   4. 打印提示让用户手动提交 + 之后贴回 Macro-F1 真分
 #
 # Usage: tools/climb/push.sh <run_dir>
@@ -14,7 +14,7 @@ set -euo pipefail
 RUN_DIR="${1:?usage: push.sh <run_dir>}"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 CSV="$RUN_DIR/pred_test1.csv"
-PENDING="$ROOT/.claude/climb/pending-lb.json"
+PENDING="$ROOT/docs/status/climb/pending-lb.json"
 
 [ -f "$CSV" ] || { echo "[climb-push] ERROR: $CSV 不存在，先跑 eval/infer 生成 CSV" >&2; exit 1; }
 

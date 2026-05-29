@@ -10,7 +10,7 @@
 set -euo pipefail
 PASTE="${1:?usage: apply-lb-score.sh \"<lb paste>\"}"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-CLIMB="$ROOT/.claude/climb"
+CLIMB="$ROOT/docs/status/climb"
 
 python3 - "$CLIMB" "$PASTE" <<'PY'
 import json, re, sys, datetime, csv as csvmod

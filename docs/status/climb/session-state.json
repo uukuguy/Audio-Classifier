@@ -1,0 +1,37 @@
+{
+  "_schema_version": 1,
+  "session_id": "2026-05-29-climb-lora",
+  "phase": "LoRA 微调 whisper-large-v3 — H-L1 准备就绪，待云端执行",
+  "last_cycle": 10,
+  "in_flight": null,
+  "confirmed": [
+    {
+      "run": "variant-F-20260528-0559",
+      "online": 0.712424,
+      "cv_cap1": 0.6402,
+      "note": "SOTA。5seed概率平均集成+cycle1固定阈值"
+    },
+    {
+      "run": "20260527-1636-h001-context-only",
+      "online": 0.710789,
+      "cv": 0.5908,
+      "note": "前SOTA(cycle1纯上下文LGBM)"
+    }
+  ],
+  "best_online": 0.712424,
+  "next_hypothesis": "H-L1",
+  "next_action": "云端执行: pip install peft && bash cloud/run_cloud.sh lora-smoke → lora-full",
+  "falsified_routes": [
+    "context-v2 (线上0.683)",
+    "廉价声学(BC无效)",
+    "文本词汇(BC无效但帮T/I)",
+    "Qwen3-0.6B pooled→LGBM/神经头(冻结pooled对turn-taking无效)",
+    "VAP-mel双声道音频(BC0.198<纯ctx0.227)",
+    "whisper本机不可行(卡机/太慢)",
+    "切片阈值变体B(砸NA)",
+    "rank平均集成C(BC崩)",
+    "cloud-whisper-large-v3-vap 冻结encoder+小头(最高0.671<<SOTA 0.712)"
+  ],
+  "last_updated": "2026-05-29T14:00:00",
+  "_note": "climb cycle 11: LoRA微调。cloud/train_lora.py 已写好，云端执行。"
+}

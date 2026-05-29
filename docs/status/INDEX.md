@@ -10,7 +10,6 @@
 | `CURRENT-STATE.md` | 结构快照：架构、关键文件、当前焦点 | 🟢 active |
 | `RESUME-NEXT-SESSION.md` | session 交接棒（恢复用 `/project-state resume`） | 🟢 active |
 | `JOURNAL.md` | append-only 事件日志 | 🟢 active |
-| `research-tree.md` | climb 战略可视化（generated，1 confirmed/9 falsified） | 🟢 active |
 | `2026-05-28-sliced-cv-audit.md` | 切片化验证集审计：cap1 可信 CV(gap+0.118→+0.055)，BC 真瓶颈非假象 | 🟢 active |
 | `2026-05-29-lora-finetune-plan.md` | LoRA 微调 whisper-large-v3 攻 BC 方案（冻结路线 falsified 后的下一步） | 🟡 decision-history |
 | `2026-05-29-diagnosis-zero-lift.md` | **零提升根因诊断（9-agent workflow）**：真根因=数据规模杠杆非频率错配；下一步3动作（动作1文本按类隔离最高ROI） | 🟡 decision-history |
@@ -37,15 +36,18 @@
 
 ## climb（LLM 驱动迭代框架）
 
-| 路径 | 是什么 |
-|---|---|
-| `.claude/rules/climb.md`（symlink→全局） | climb 执行手册（项目无关） |
-| `.claude/climb/climb.config.yaml` | 本项目 adapter：manual-csv、5 类子分、SOTA 锚点（gitignored） |
-| `.claude/climb/hypotheses.yaml` | 假设池（paradigm C/B/A/ensemble，8 假设）（gitignored） |
-| `.claude/climb/{calibration,runs.csv,pending-lb,session-*}` | climb 状态机（gitignored，HARD INVARIANT：state on disk） |
-| `../../tools/climb/*.sh` | adapter 脚本（push/apply-lb-score/eval-local/train/consult-ais，tracked） |
-| `../../tools/climb/cycle_*.py` | 9 cycle 实现（context/context_v2/audio_fusion/text_fusion×2/vap_mel/vap_fusion/vap_whisper + extract_text_feats + regen-tree） |
-| `research-tree.md` | **climb 战略可视化（generated，每 LB 注入 auto-regen）**：paradigm ladder + 假设池 + 诊断链 |
+> **2026-05-30**: climb 状态从 `.claude/climb/`（gitignored，fresh clone 丢）迁到 `docs/status/climb/`（**git-tracked**）。加载分层（见 climb.md §9/§10.4）：resume **只读 research-tree**（含 in-flight 段），其余 storage-layer 按需 grep。
+
+| 路径 | 是什么 | 加载层 |
+|---|---|---|
+| `.claude/rules/climb.md`（symlink→全局） | climb 执行手册（项目无关） | rules |
+| `climb/research-tree.md` | **climb 战略可视化（generated）**：in-flight 段 + paradigm ladder + 假设池 + 诊断链。resume 单文件即够。 | 🟢 resume-load |
+| `climb/session-state.json` | session 进度（phase/last_cycle/in-flight/best_online）。research-tree in-flight 段数据源。 | 🟢 resume-load（源） |
+| `climb/climb.config.yaml` | adapter：manual-csv、5 类子分、state_dir、SOTA 锚点 | 📦 storage |
+| `climb/hypotheses.yaml` | 假设池（paradigm C/B/A/ensemble） | 📦 storage |
+| `climb/{calibration,runs.csv,pending-lb,session-target,adjudicator-log}` | climb 状态机（tracked，cycle.sh 写 + regen 读） | 📦 storage |
+| `../../tools/climb/*.sh` + `hooks/post-commit` | adapter 脚本 + 确定性同步兜底 hook（fresh clone 重装，见 CLAUDE.md） | tracked |
+| `../../tools/climb/cycle_*.py` | 9 cycle 实现 + regen-tree（2026-05-30 加 in-flight 段 + 去 datetime 确定性） | tracked |
 
 ## External anchors
 

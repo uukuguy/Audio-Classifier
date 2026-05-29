@@ -1,0 +1,310 @@
+# climb hypothesis pool — append-only state machine
+# Audio-Classifier / FinVCup turn-taking. paradigm = 编码器/架构组合。
+# 字段定义见 ~/.claude/shared-rules/climb.md §9 + templates。
+# ranking 0-1 = expected_lift / cost / calibration_confidence 综合，climb 维护。
+
+hypotheses:
+  # ===== paradigm C: 纯上下文标签（已验证地板分 0.59，集成锚点）=====
+  - id: H-001
+    description: 纯上下文标签 LGBM + 逐类阈值，做成可提交 CSV（首个公榜锚点）
+    parent_paradigm: context-only
+    expected_lift: "实测线上 0.7108"
+    cost_h: 0.06
+    ranking: 0.90
+    status: confirmed
+    created_at: 2026-05-27T16:10:00
+    results:
+      - session: 2026-05-27-climb-init
+        cycle: 1
+        run: 20260527-1636-h001-context-only
+        local: 0.5908
+        local_per_sub: {c: 0.9734, na: 0.7716, t: 0.5272, i: 0.4632, bc: 0.2188}
+        online: 0.710789
+        gap: 0.1200
+        pushed_at: 2026-05-27T16:36:00
+        lb_landed_at: 2026-05-27T16:51:05
+        verdict: "confirmed — 排~13名，离前10仅0.0084"
+        decision_reason: "first-of-paradigm, calibration needed"
+    note: "★ gap +0.12（线上>CV）。纯上下文是强基础锚点 + 集成一路。BC F1 仅 0.22 是天花板。"
+
+  # ===== paradigm B: 强化 baseline（修漏分点，低风险改进分）=====
+  - id: H-002
+    description: 修 baseline 漏分点——逐类阈值搜索（baseline 写死 0.5）
+    parent_paradigm: baseline-enhanced
+    expected_lift: "+0.05~0.07 Macro-F1（EDA 已验证阈值调优杠杆）"
+    cost_h: 1
+    ranking: 0.85
+    status: pending
+    created_at: 2026-05-27T16:10:00
+    results: []
+    note: "EDA 显示阈值调优 0.52→0.59。baseline infer_test.py 已支持 --threshold，扩成逐类。"
+
+  - id: H-003
+    description: baseline 损失 BCE→ASL(γ+=0,γ-=2~4,m=0.05) + 适度 pos_weight（替裸 neg/pos）
+    parent_paradigm: baseline-enhanced
+    expected_lift: "+0.01~0.03，主要拉 BC/I"
+    cost_h: 3
+    ranking: 0.65
+    status: pending
+    created_at: 2026-05-27T16:10:00
+    results: []
+    note: "research C2：ASL 多标签不均衡首选，裸 25x pos_weight 会塌精度。"
+
+  - id: H-004
+    description: baseline 音频塔改保帧序列 + 双声道（不 mean-mono + tail-pool）
+    parent_paradigm: baseline-enhanced
+    expected_lift: "+0.01~0.03，BC/I"
+    cost_h: 4
+    ranking: 0.55
+    status: pending
+    created_at: 2026-05-27T16:10:00
+    results: []
+    note: "research：baseline 所有编码器 pool 成单向量是最大漏分点；SOTA 一致保序列。"
+
+  # ===== paradigm A: 双声道帧级 VAP 式（冲分主线）=====
+  - id: H-005
+    description: 双声道 cross-attention VAP 式融合，冻结 Qwen2-Audio Whisper encoder（合规优先）
+    parent_paradigm: vap-stereo
+    expected_lift: "+0.05~0.10，目标破前10"
+    cost_h: 9
+    ranking: 0.60
+    status: pending
+    created_at: 2026-05-27T16:10:00
+    results: []
+    note: "research Option A。借 VAP-Realtime 架构。Qwen 路线满足白名单优先。"
+
+  - id: H-006
+    description: 编码器 spike——chinese-hubert-large(317M) vs Qwen2-Audio encoder 的 BC/I 增益对比
+    parent_paradigm: vap-stereo
+    expected_lift: "决定是否值得报备非 Qwen 模型"
+    cost_h: 3
+    ranking: 0.50
+    status: pending
+    created_at: 2026-05-27T16:10:00
+    results: []
+    note: "research：中文电话域 chinese-hubert 更优但需 6/10 前报备。小实验先量化增益。"
+
+  - id: H-007
+    description: 显式 F0/pitch 帧特征注入（中文 turn-taking 更依赖 pitch）
+    parent_paradigm: vap-stereo
+    expected_lift: "+0.005~0.02（中文声调红利）"
+    cost_h: 2
+    ranking: 0.45
+    status: pending
+    created_at: 2026-05-27T16:10:00
+    results: []
+    note: "research B3：Multilingual VAP 发现中文压平 pitch 掉分更多。低成本试。"
+
+  # ===== 实测追加（climb 自主派生）=====
+  - id: H-001b
+    description: context-v2 K-fold OOF + XGB 集成 + 80 特征（榨 context-only）
+    parent_paradigm: context-only
+    expected_lift: "白做"
+    cost_h: 0.25
+    ranking: 0.0
+    status: falsified
+    created_at: 2026-05-27T17:06:00
+    results:
+      - run: 20260527-1706-h001b-context-v2
+        local: 0.5921
+        online: 0.683266
+        gap: 0.0912
+        verdict: "falsified — 线上 0.6833 < cycle1 0.7108。激进 OOF 阈值(T 0.64)害的"
+    note: "★负结果：context-only 到顶 + 激进滑窗阈值线上更差。BC 铁卡 0.217。"
+
+  - id: H-A1
+    description: 廉价声学特征 late fusion（energy/zcr/voicing/双声道对比 30维）测 BC
+    parent_paradigm: audio-cheap-fusion
+    expected_lift: "测 BC 能否动"
+    cost_h: 0.4
+    ranking: 0.0
+    status: falsified
+    created_at: 2026-05-27T17:21:00
+    results:
+      - run: 20260527-1711-hA1-audio-fusion
+        local: 0.5947
+        online: null
+        verdict: "falsified — BC 0.217→0.219(噪声)。粗声学统计救不了 BC，未提交"
+    note: "★负结果2：廉价声学对 BC 无效。BC 需词汇线索或真神经编码器。指向文本路线。"
+
+  - id: H-T1
+    description: ASR 词汇特征 late fusion（BC词频/最近BC词距/通道短发声率）测 BC
+    parent_paradigm: text-lexical-fusion
+    expected_lift: "BC 0.217 → 0.201（没救）"
+    cost_h: 0.4
+    ranking: 0.0
+    status: falsified
+    created_at: 2026-05-27T17:49:00
+    results:
+      - run: 20260527-1749-hT1-text-fusion
+        local: 0.5924
+        local_per_sub: {c: 0.9182, na: 0.7777, t: 0.5786, i: 0.4863, bc: 0.2012}
+        online: null
+        verdict: "falsified for BC (0.217→0.201) 但意外帮 T(+0.04)/I(+0.05)。词袋抓不到BC时机。未提交(C阈值floor砍崩C)"
+    note: "★负结果3。诊断链闭环：手工特征+LGBM 对 BC 到顶，BC 需神经编码器。文本该救 T/I 不是 BC。"
+
+  - id: H-T2
+    description: 文本特征救 T/I（保留 cycle1 的 C 低阈值，文本特征专攻 T/I）+ per-class-aware 阈值
+    parent_paradigm: text-lexical-fusion
+    expected_lift: "净 +0.004（T/I 涨被 BC/NA 退化抵消）"
+    cost_h: 0.4
+    ranking: 0.0
+    status: falsified
+    created_at: 2026-05-27T18:13:00
+    results:
+      - run: 20260527-1824-hT2-text-perclass
+        local: 0.5945
+        local_per_sub: {c: 0.9712, na: 0.7491, t: 0.5787, i: 0.4849, bc: 0.1884}
+        online: null
+        verdict: "不提交：vs cycle1 test 差35%，T正例502→655(v2反向风险)、I砍2/3。CV+0.004在误差内，预测剧烈偏移可疑"
+    note: "★per-class 阈值修复 C 成功。文本对 T/I 增益真实但 LGBM late-fusion 把它和 BC/NA 退化绑死。便宜路线穷尽。"
+
+  - id: H-T3
+    description: Qwen3-0.6B 冻结 mean-pool 文本特征 → LGBM
+    parent_paradigm: qwen-text-frozen
+    expected_lift: "macro 0.583→0.575 全面略降"
+    cost_h: 0.5
+    ranking: 0.0
+    status: falsified
+    created_at: 2026-05-27T19:00:00
+    results:
+      - run: 20260527-1911-hT3-extract
+        local: 0.575
+        online: null
+        verdict: "falsified — 稠密embedding喂LGBM错配。提取跑到29%杀掉省2.5h。110通缓存留存"
+    note: "★稠密 embedding 不喂树。但见 H-N1：换神经头也无效。"
+
+  - id: H-N1
+    description: Qwen3 文本 embedding 喂神经融合头（线性投影+MLP，纠正喂树错配）
+    parent_paradigm: qwen-text-frozen
+    expected_lift: "ctx-only 0.5883 → ctx+qwen 0.5676 反降"
+    cost_h: 0.3
+    ranking: 0.0
+    status: falsified
+    created_at: 2026-05-27T20:00:00
+    results:
+      - run: neural-fusion-110conv
+        local: 0.5676
+        online: null
+        verdict: "falsified — 神经头也救不了。冻结Qwen3 mean-pool文本本身是噪声(BC 0.227→0.168)"
+    note: "★★关键：冻结编码器抽 pooled 特征(喂树/喂神经头)对本任务全无效。要用Qwen须端到端微调保序列。意外:纯ctx神经头 BC0.227>LGBM0.217"
+
+  - id: H-V1
+    description: 最小 VAP — 双声道 mel 帧序列 + cross-attention（保序列不pool），纯音频攻 BC
+    parent_paradigm: vap-stereo
+    expected_lift: "纯音频 BC=0.161"
+    cost_h: 0.6
+    ranking: 0.0
+    status: falsified
+    created_at: 2026-05-27T20:30:00
+    results:
+      - run: 20260527-hV1b-vap-mel-fixed
+        local: 0.5399
+        verdict: "纯音频 mel BC=0.161(对比不公平,纯音频vs纯context)。首跑 nan bug(log-mel未归一化)已修"
+    note: "保序列✓双声道cross-attn✓。但纯mel音频弱。见 H-V2 公平对比。"
+
+  - id: H-V2
+    description: ctx + VAP 音频融合（公平对比：音频对 context 有无 BC 增量）
+    parent_paradigm: vap-stereo
+    expected_lift: "BC 0.227→0.198 反降"
+    cost_h: 0.6
+    ranking: 0.0
+    status: falsified
+    created_at: 2026-05-27T21:08:00
+    results:
+      - run: 20260527-hV2-vap-fusion
+        local: 0.5812
+        verdict: "★干净负结果：同输入同架构，ctx+mel音频 BC=0.198 < 纯ctx 0.227。mel对BC无增量"
+    note: "★VAP-mel 否。开放：mel太弱(需Qwen2-Audio)? 40通欠拟合? cross-attn没对准BC瞬时? 大投入下注待用户定。"
+
+  - id: H-V3
+    description: whisper-small 双声道 VAP（SSL 音频替 mel，攻 BC）
+    parent_paradigm: vap-stereo
+    expected_lift: "本机不可行，未拿到 BC 数"
+    cost_h: 0
+    ranking: 0.0
+    status: falsified
+    created_at: 2026-05-27T21:53:00
+    results:
+      - run: 20260527-hV3d-whisper-10conv
+        verdict: "本机不可行：whisper-small 不限线程卡死全机(load39)，限4线程25min/通(10通4h)。large-v3 45h。whisper系本机全否"
+    note: "★本机音频编码器路线实测穷尽。whisper 需云GPU。模型已下(small+large-v3 在 ~/.cache)。"
+
+  # ===== 9 cycle。本机所有路线(LGBM/冻结特征/mel/whisper)实测穷尽。最优 cycle1 0.7108 =====
+  # 真突破唯一路径=云GPU(whisper-large-v3端到端/VAP)。本机零投入剩：30s切片验证集让CV可信 / cycle1多seed集成
+  # 决策门待用户：上云 or 守0.7108换零投入角度
+
+  # ===== 集成（单模型打磨后）=====
+  - id: H-008
+    description: A+B+C 多 paradigm 集成（rank 平均）+ 逐类跨折最小偏差阈值
+    parent_paradigm: ensemble
+    expected_lift: "+0.01~0.03（冲前3最后一公里）"
+    cost_h: 2
+    ranking: 0.30
+    status: pending
+    created_at: 2026-05-27T16:10:00
+    results: []
+    note: "research C1：rank 平均比概率平均阈值更稳。需各 paradigm 的 OOF 预测。"
+
+  # ===== 云端 LoRA 微调 (cycle 11+) =====
+  - id: H-L1
+    description: "LoRA 微调 whisper-large-v3 encoder (r=32, α=16, q/v_proj) + cap5 切片训练攻 BC"
+    parent_paradigm: lora-whisper
+    expected_lift: "+0.03~0.07（破 SOTA 0.7124→冲 0.74+）"
+    cost_h: 2
+    ranking: 0.85
+    status: pending
+    created_at: 2026-05-29T14:00:00
+    results: []
+    note: "冻结路线 falsified（最高 0.671<<SOTA），LoRA 让 encoder 学 turn-taking 特异信号。推荐 cap5 切片 1845 样本×50ep×5fold≈1.5h。成功标准: 线上>0.7124"
+
+  - id: H-L2
+    description: "LoRA 微调 + ASL 损失替 BCE（攻 BC 类不均衡更精准）"
+    parent_paradigm: lora-whisper
+    expected_lift: "+0.005~0.02 (在 H-L1 基础上)"
+    cost_h: 2
+    ranking: 0.60
+    status: pending
+    created_at: 2026-05-29T14:00:00
+    results: []
+    note: "research: ASL(γ+=0,γ-=2~4,m=0.05) 对多标签不均衡优于 focal+BCE。LoRA 架构不变只换 loss"
+
+  - id: H-L3
+    description: "LoRA 微调 + cap1 切片训练 (369 样本, 更强正则, 防过拟合)"
+    parent_paradigm: lora-whisper
+    expected_lift: "备选: 若 cap5 过拟合则降规模"
+    cost_h: 0.5
+    ranking: 0.40
+    status: pending
+    created_at: 2026-05-29T14:00:00
+    results: []
+    note: "cap5(1845样本)可能过拟合 LoRA 5-15M 参数。cap1(369) + 更强正则(dropout 0.5, lora_dropout 0.2, wd 0.1) 是退路"
+
+  # ===== 云端冻结路线 (已 falsified, 保留记录) =====
+  - id: H-cloud-smoke
+    description: "云端 whisper-large-v3 冻结 encoder smoke 40通"
+    parent_paradigm: cloud-whisper-large-v3-vap
+    expected_lift: "实测 0.634"
+    cost_h: 4
+    ranking: 0.0
+    status: falsified
+    created_at: 2026-05-28T16:30:00
+    results:
+      - run: cloud-whisper-smoke
+        online: 0.63378
+        verdict: "falsified — smoke 线上低于 SOTA"
+    note: "冻结路线第一验证。线上 0.634 << SOTA 0.712"
+
+  - id: H-cloud-full
+    description: "云端 whisper-large-v3 冻结 encoder 全量 + cycle1 阈值"
+    parent_paradigm: cloud-whisper-large-v3-vap
+    expected_lift: "实测 0.671"
+    cost_h: 8
+    ranking: 0.0
+    status: falsified
+    created_at: 2026-05-28T22:30:00
+    results:
+      - run: cloud-whisper-full-cycle1
+        online: 0.670908
+        verdict: "falsified — 冻结路线最高但仍远低于 SOTA(-0.041)"
+    note: "冻结路线天花板。encoder 表征不对口 turn-taking"

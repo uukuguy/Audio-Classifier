@@ -5,12 +5,19 @@
 
 ## Fresh clone setup
 
-`.claude/` is gitignored, so the symlink doesn't survive clone:
+`.claude/` is gitignored, so symlinks 和 git hooks 不随 clone:
 
 ```bash
+# 1. lwm + climb rules symlink
 mkdir -p .claude/rules
 ln -s ~/.claude/shared-rules/lightweight-memory.md .claude/rules/lightweight-memory.md
+ln -s ~/.claude/shared-rules/climb.md .claude/rules/climb.md
+
+# 2. climb 确定性状态同步 git hook (兜底 — 见 climb.md §12)
+cp tools/climb/hooks/post-commit .git/hooks/post-commit && chmod +x .git/hooks/post-commit
 ```
+
+> ⚠️ **climb 状态在 `docs/status/climb/` (git-tracked), 不在 `.claude/climb/`** (2026-05-30 迁移, 修 fresh clone 丢状态 bug — `.claude/` gitignored)。config + 状态 + research-tree 全在 `docs/status/climb/`。
 
 程序定位等请优先使用 codegraph。
 

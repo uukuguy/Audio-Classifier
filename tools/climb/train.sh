@@ -3,7 +3,7 @@
 #
 # Usage: tools/climb/train.sh <hypothesis_id>
 # 约定:
-#   - 读 .claude/climb/hypotheses.yaml 找该 id 的 paradigm + 描述
+#   - 读 docs/status/climb/hypotheses.yaml 找该 id 的 paradigm + 描述
 #   - 按 paradigm 分派 trainer:
 #       context-only      → tests/main/eda_context_baseline.py（分钟级，本机 MPS）
 #       baseline-enhanced → baselines/.../src.train（改损失/阈值/音频塔）

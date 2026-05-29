@@ -28,8 +28,8 @@ SOTA = **变体 F（5seed 概率平均集成 + cycle1 阈值）线上 0.712424**
 | `tools/climb/cycle_vap_mel.py` / `cycle_vap_fusion.py` / `cycle_vap_whisper.py` | VAP 双声道 cross-attn（mel/whisper，均否） |
 | `tools/climb/extract_text_feats.py` | Qwen3 文本特征去重缓存 |
 | `tools/climb/{push,apply-lb-score,eval-local,regen-tree}.sh/.py` | climb adapter（manual-csv） |
-| `.claude/climb/` | climb 状态机（hypotheses/runs.csv/calibration/session-state） |
-| `docs/status/research-tree.md` | 战略可视化（generated，每 LB 注入 auto-regen） |
+| `docs/status/climb/` | climb 状态机（git-tracked，2026-05-30 从 .claude/climb 迁出）：hypotheses/runs.csv/calibration/session-state/config |
+| `docs/status/climb/research-tree.md` | 战略可视化（generated，resume 只读这个，含 in-flight 段） |
 | `docs/plans/2026-05-27-finvcup-turn-taking-CONTEXT.md` | 决策契约（10 决策） |
 | `docs/plans/2026-05-27-turn-taking-audio-RESEARCH.md` | VAP/BC SOTA + 编码器选型 research |
 | `baselines/2026_finvcup_baseline/` | 官方 baseline（音频IO/ContextLabelEncoder 可复用，gitignored） |
