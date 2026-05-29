@@ -185,6 +185,16 @@ class TurnTakingSliceDataset(Dataset):
     def __len__(self) -> int:
         return len(self.samples)
 
+    def get_target(self, idx: int) -> np.ndarray:
+        """Lightweight target lookup (labels only, NO audio load/resample/mel).
+        Used for pos_weight computation — avoids ~Nx wasted audio processing."""
+        cid, end, split = self.samples[idx]
+        if split != "train":
+            return np.zeros(5, dtype=np.float32)
+        labels = self._get_labels(cid, split)
+        fut = set(int(x) for x in labels[end:end + TGT])
+        return np.array([1 if k in fut else 0 for k in range(5)], dtype=np.float32)
+
     def __getitem__(self, idx: int):
         cid, end, split = self.samples[idx]
         labels = self._get_labels(cid, split)
@@ -446,8 +456,9 @@ def main() -> None:
     ctx_dim = sample_ctx.shape[0]
     print(f"[lora] ctx_dim = {ctx_dim} (inferred from data)", file=sys.stderr)
 
-    # ── compute pos_weight from dataset ──
-    targets = np.array([train_ds[i][3].numpy() for i in range(len(train_ds))])
+    # ── compute pos_weight from dataset (labels only, NO audio load — was the
+    #    1.5h CPU-bottleneck bug: __getitem__ ran resample+logmel just to get target) ──
+    targets = np.array([train_ds.get_target(i) for i in range(len(train_ds))])
     pw = torch.tensor(
         [(len(targets) - targets[:, k].sum()) / max(1, targets[:, k].sum())
          for k in range(5)]
