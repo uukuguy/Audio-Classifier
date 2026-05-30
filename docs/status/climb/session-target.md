@@ -55,5 +55,5 @@
 
 <!-- TARGET-BEGIN (机器可读, check-target.py 读; LB 落/cycle 末自动判定 §4.1) -->
 target_metric: online
-target_value: 0.7357
+target_value: 0.75
 <!-- TARGET-END -->

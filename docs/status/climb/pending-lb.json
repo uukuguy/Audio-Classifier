@@ -1,3 +1,28 @@
 {
-  "pending": []
+  "pending": [
+    {
+      "run_id": "stack-fusion-grid-20260531-0129",
+      "paradigm": "ensemble-grid",
+      "pushed_at": "2026-05-31T01:35:00+08:00",
+      "csv": "tools/runs/climb/stack-fusion-20260531-0129/pred_test1.csv",
+      "cap1_cv": 0.6655,
+      "nested_cv": 0.6198,
+      "predicted_online": "0.69-0.71",
+      "pos_counts": {"c": 975, "na": 915, "i": 59, "bc": 22, "t": 471},
+      "note": "grid加权融合(context内4成员)。nested证过拟合(BC0.364→0.200蒸发),预测≈或<变体F。用户上传裁判。"
+    },
+    {
+      "run_id": "orthofuse-20260531-0319",
+      "paradigm": "context-whisper-orthofuse",
+      "pushed_at": "2026-05-31T03:19:00+08:00",
+      "csv": "tools/runs/climb/orthofuse-20260531-0319/pred_test1.csv",
+      "cap1_cv": 0.6410,
+      "base_cap1": 0.6228,
+      "gain_cap1": 0.0182,
+      "predicted_online": "0.713 (仅+0.0006, ctx gap外推高估)",
+      "pos_counts": {"c": 975, "na": 947, "i": 89, "bc": 27, "t": 507},
+      "strat": {"C": "ctx", "T": "w70(0.7ctx+0.3wsp)", "BC": "ctx", "I": "whisper", "NA": "ctx"},
+      "note": "★context×whisper跨源真增益(非过拟合)。T/I借whisper(whisper真实强T0.656/I0.509)。first-of-paradigm必push校准whisper test gap。基座是lgbm_v1单模非变体F,冲0.75需叠变体F强基座。"
+    }
+  ]
 }

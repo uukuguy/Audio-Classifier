@@ -7,9 +7,9 @@
 
 ## In-flight / session state (dynamic — resume reads this, then verifies liveness)
 
-- **phase**: VAP/CPC 全量微调完成 — BC=0.222 与 LGBM 打平未突破，待 LB 真分校准
+- **phase**: 模型融合冲0.75。context内融合nested证伪(不正交)。发现whisper T/I比context强=真正交。云端跑whisper head重出连续概率→per-class正交融合
 - **best online**: 0.712424
-- **last_cycle**: 11
+- **last_cycle**: 14
 - **next_hypothesis**: 待定 — VAP单模未突破，候选: HuBERT/MMS encoder 换 / VAP当BC列融合LGBM / 验证VAP-BC与LGBM-BC互补性
 - **in-flight**: none
 
@@ -112,6 +112,10 @@ graph LR
   - lift: 备选: 若 cap5 过拟合则降规模
 - **H-008** (rank 0.30, cost 2h, pending): A+B+C 多 paradigm 集成（rank 平均）+ 逐类跨折最小偏差阈值
   - lift: +0.01~0.03（冲前3最后一公里）
+
+### Pending LB (2)
+- stack-fusion-grid-20260531-0129 (pushed 2026-05-31T01:35:00+08:00, paradigm ensemble-grid)
+- orthofuse-20260531-0319 (pushed 2026-05-31T03:19:00+08:00, paradigm context-whisper-orthofuse)
 
 ### Confirmed (1)
 - H-001: 纯上下文标签 LGBM + 逐类阈值，做成可提交 CSV（首个公榜锚点）

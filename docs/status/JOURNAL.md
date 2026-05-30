@@ -224,3 +224,28 @@
 - 20:10 ★融合可行性诊断:现有context变体几乎不正交(cycle1 vs变体F仅24处不同=同模型,E/G是改阈值/特征变体非独立)。我没有"多个独立强模型"可融,变体F 5seed已榨干同范式融合(10seed无增益)。★榜单"融合增益"正确做法=造算法正交强模型(XGB/CatBoost/神经MLP over context,同~0.71水平但归纳偏置不同→真正交→融合有增益),我之前一直LGBM内打转没做。新框架1-3分路径:①造算法正交强context模型融合②NA0.871/I0.581温和阈值优化(守铁律)。完全不同于之前BC死磕
 - 21:00 ★算法正交集成(本地,stride40):lgbm0.6349/xgb0.6315/cat0.6328(三树接近)/mlp0.5498(BC=0拖累,sklearn MLP无scale_pos_weight没学稀有类)。等权融合0.6120(-0.023负!)。根因:①MLP太弱拖垮等权②三树不够正交(同归纳偏置)融合无增益。修正方向:剔MLP或修MLP class_weight+树加权。但核心=树间不正交=榜单"算法正交融合"需真异构(树+神经),而我的MLP坏了。STRIDE=5首跑140万样本24min卡死(CatBoost),改stride40 180k快(教训:cap1评估不需密集训练样本)
 - 21:15 handoff(用户:开新会话继续):一整轮探尽所有突破路径全证伪/负增益(BC9角度/T-I文本/序列/Omni双用法/融合)。DECISIONS补D-4(Omni+9角度)+D-5(单一信号源根因+榜单框架)。RESUME重写:根因=只有context-LGBM一个强信号源,融合需第二个强且正交模型(缺)。下一步候选:①修MLP重融合(本机快)②接受0.712转复赛镜像③找全新第二信号源(真问题)。Omni已下云端待用。SOTA 0.7124未破
+
+## 2026-05-31
+- 00:30 climb start: 目标冲0.75(榜首)。本轮攻击=模型融合。根因复盘:上轮等权融合-0.023非"融合无用",是①MLP坏(BC=0拖垮)②三树不正交③等权本身错。target_value 0.7357→0.75
+- 00:35 修cycle_algo_ensemble MLP: 加_balance_idx正类过采样(neg/pos≤3)让MLP学稀有类,跑lgbm+xgb+修后mlp等权验证(stride40/5fold)
+- 00:40 写cycle_stack_fusion.py(冲0.75主武器):4成员(lgbm_v1/xgb_v1/lgbm_v2富特征/mlp_v1)真正交(算法×特征子集),per-class选最优融合(等权/权重网格/logistic-stacking,cap1裁判,守变体F固定阈值)
+- 00:52 ★MLP修复验证(stride40/5fold):MLP BC 0→0.154不再坍缩(过采样生效),但等权融合仍-0.0111。根因清晰:①MLP修好但仍远弱(macro0.566<<树0.624)等权把树拖下②lgbm0.6228≈xgb0.6242不正交。干净单变量结论=修MLP≠等权转正,等权本身错。转stacking(per-class加权,弱成员自动降权)
+- 01:04 ★★stack_fusion结果:per-class-best cap1 0.6655 vs base0.6228=+0.0428(等权再次-0.0074证等权错)。但红灯:增益主来自grid在cap1(369样本)搜5^4权重=过拟合嫌疑(BC0.20→0.364/+0.164异常大,同ti-robust虚高模式)。lgbm_v1/xgb_v1/lgbm_v2三者0.622-0.624不正交,mlp弱。需nested验证grid泛化性再判,不被+0.0428带偏(阈值铁律:cap1搜参=变相调参)
+- 01:29 ★★★nested-CV揭穿grid过拟合(决定性):in-sample grid macro0.6655 vs nested泛化0.6198<base0.6228。逐类:BC 0.364→nested0.200(+0.164全是过拟合,蒸发回base)/T grid0.642→nested0.607<base0.621(过拟合反伤)/I 0.483→0.455=退回single/C/NA无增益。stacking也无效(BC0.182)。grid在369cap1搜5^4权重=变相调参(同ti-robust虚高陷阱),提交前nested抓住。
+- 01:32 ★融合路线证伪闭合:4成员(lgbm_v1/xgb_v1/lgbm_v2/mlp)全在0.622-0.624不正交=同context信号源变体,等权/网格/stacking三策略全无真增益。印证D-5根因:只有context-LGBM一个强信号源,融合数学上不可能超过该信号源天花板。需第二个独立强信号源(非context变体)。变体F 0.7124仍SOTA
+- 01:38 grid提交件生成(用缓存秒出,无重训):tools/runs/climb/stack-fusion-20260531-0129/pred_test1.csv,正例c975/na915/i59/bc22/t471(vs变体F t504/i64/bc31更少)。登记pending-lb。用户上传裁判。预测:nested证过拟合→真分≈或<0.7124
+- 01:40 ★产物盘点(用户要求保存融合概率):成员概率缓存_stack_cache_s40.npz(37MB,4成员OOF+test全留,后续--cached秒复用)。vap-full有test_probs.npz(1000×5连续概率,真正交音频源)。但cloud-whisper/变体F只存0/1 CSV丢了连续概率=过去资产缺口(想融融不了)。教训:跑模型必存连续概率npz
+- 01:42 ★融合维度战略评估:context内融合nested证伪(成员不正交)。跨源融合唯一活产物=VAP连续概率,但VAP只在BC(已饱和0.22)正交,C/T/I/NA全弱于context→数学上帮不到macro(同D-5)。融合在现有信号源已穷尽。需第二个独立强信号源才有融合价值
+- 01:48 ★★★逐类核对发现真正交:cloud-whisper cap1 T=0.667(vs context0.625)/I=0.555(vs0.539)明显强!whisper音频在T/I有context没有的信号。之前whisper判死(0.671<0.712)是BC拖累+整体弱,但逐类T/I比context强=D-5"全类各榨一点"从未用过的真融合点。VAP同理I偏弱但T0.630≈。方向:per-class借whisper T/I+借context C/NA/BC,nested验证(防grid过拟合重演)
+- 01:50 ★障碍+资产:whisper只存0/1 CSV没存连续OOF概率→当前无法nested验证融合。但云端64G whisper帧特征全在(/root/autodl-fs/backups/whisper_cache_full,369train+1000test),开云机跑head(跳提取)可重出whisper连续概率。这是本轮冲0.75真希望(第二信号源+per-class正交),需用户开云机
+- 01:44 ★云端whisper head训练启动(冲0.75主攻):PID73208(云端),RUN_DIR=tools/runs/climb/whisper-fusion-20260531-0143。改train_head_cuda存probs.npz连续概率(产物铁律+融合必需)。跳特征提取(64G cache软链),5fold×15ep。完后拉probs.npz回本机→per-class借whisper T/I+context C/NA/BC+nested验证。ETA~1-2h(纯head无提取)
+- 01:48 等训练不空等(climb §10.2.1):本机备好融合脚本cycle_orthofuse.py(per-class借whisper T/I+context C/NA/BC,5固定策略ctx/whisper/eq/w70/w30,固定权重无grid搜索防过拟合,+0.003保守门)。whisper probs.npz一回来立即跑。watcher已备(轮询云端PID73208+验probs.npz两信号)
+- 01:50 云训练进度:扫描369通完,装载Xa 68.6GB(load200/369),GPU待装载完启动。179867窗(stride5全量),5fold×15ep,ETA~1-2h
+- 02:05 翻研究报告找融合角度(用户要求)。关键发现:①RESEARCH挖出多音频编码器=正交源:VAP-HuBERT/MMS仓库自带(但实际中成本-无VAP预训练权重需从头训,文档高估为零成本)/chinese-hubert中文电话域最贴 ②ASL损失/logit-adjustment/LMF融合都没用过 ③★矛盾:D-4说BC信息论上限0.22但诊断报告LoRA让BC cap5顶0.267=音频有BC信号只是冻结提不出+全量30-63h不可行。D-4需松动为"冻结路线下0.22"
+- 02:08 ★融合资产盘点:vap-full存了test_probs(1000×5)+fold0-4.pt但无cap1 OOF→无法nested验证融合权重(同whisper旧缺口)。再证用户"必存OOF概率"。决策:whisper跑完先做context×whisper两源融合(都有OOF能nested),涨了再补VAP-CPC OOF做三源。vap-full test_probs已拉回本机存
+- 02:30 whisper训练进度:fold1/5完成(~20min),现fold2 ep5。5fold ETA~1h后出probs.npz。注:head loss非单调(ep5 0.51→ep15 0.60反弹)=lr1e-3偏大后期震荡,但不动(实验值不碰baseline,此轮验融合非调whisper)
+- 02:50 ★核实VAP-HuBERT/MMS(用户要求,用本地baselines/VAP非ssh):codegraph搜不到因baselines/VAP gitignored未索引。直读本地确认=真实完整实现非空壳:EncoderHubert(178行,完整forward/extract_features/transformer/causal_mask,封装HubertModel,有__main__自测VAP(enc,transformer)能跑)/EncoderMMS(123行,7层conv 16k→50Hz/512ch,封装Wav2Vec2)
+- 02:52 ★修正"零成本"误判(之前照抄文档没核实):真实成本=中等。①VAP stereo transformer预训练权重为CPC256d训,换HuBERT维度靠projection对齐但transformer需重微调适应新特征分布=非从零但非零成本 ②HuBERT英文/MMS多语言含中文→MMS更对口中文电话域 ③需下模型(HuBERT360M/MMS300m 1.2G)。结论:真实可跑第二音频源,成本=重训VAP~1-2h,MMS优于HuBERT
+- 03:00 ★补漏:中文音频模型+wav2vec2核实(用户指出我漏报)。全是deferred从未试:chinese-hubert-large(317M中文WenetSpeech,H-006 pending,最高潜力需报备)/chinese-wav2vec2(备选)/MMS(多语言)/emotion2vec(副语言情感=正交维度独特)。★文献矛盾:RESEARCH说chinese-hubert中文最优但vap-pivot#8说CPC>wav2vec2/MMS for VAP(已试CPC),换wav2vec2当VAP encoder文献预期更差,但chinese-hubert当独立特征源可能像whisper正交T/I。优先级:whisper(在做)>chinese-hubert(需报备)>emotion2vec>wav2vec2/MMS-VAP(文献弱)。决策门:whisper两源融合先验证跨源是否真涨,涨了chinese-hubert最值得投
+- 03:19 ★★context×whisper跨源融合成立(真增益非过拟合):per-class-best cap1 0.6228→0.6410(+0.0182)。T选w70(0.7ctx+0.3wsp)0.658/I选whisper 0.509,whisper真实强(T0.656/I0.509 vs ctx0.621/0.455)。区别grid过拟合:固定权重凸组合无cap1搜索+标签对齐✓,BC守ctx0.20没假涨。提交件orthofuse-20260531-0319 pos c975/na947/i89/bc27/t507(I 64→89健康)
+- 03:20 ★诚实校准:线上估0.7130仅+0.0006 vs SOTA。两原因①融合基座lgbm_v1单模(0.6228)非变体F 5seed(0.6402)②whisper test gap≈0非ctx+0.072用ctx gap外推高估。冲0.75下一步:whisper T/I增益叠变体F强基座,非单模lgbm

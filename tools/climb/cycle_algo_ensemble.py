@@ -51,13 +51,31 @@ def make_clf(algo, spw):
                                   random_seed=SEED)
     if algo == "mlp":
         from sklearn.neural_network import MLPClassifier
-        from sklearn.pipeline import make_pipeline
+        from sklearn.pipeline import Pipeline
         from sklearn.preprocessing import StandardScaler
-        # MLP 不支持 scale_pos_weight, 靠 class_weight 近似 (sklearn MLP 无, 用 sample_weight)
-        return make_pipeline(StandardScaler(),
-                             MLPClassifier(hidden_layer_sizes=(128, 64), max_iter=300,
-                                           early_stopping=True, random_state=SEED))
+        # MLP 不支持 scale_pos_weight/sample_weight → 用 StandardScaler + 训练时 oversample
+        # (sklearn MLPClassifier.fit 无 sample_weight 参数, 改在 oof_one 里对正类过采样)
+        return Pipeline([("sc", StandardScaler()),
+                         ("mlp", MLPClassifier(hidden_layer_sizes=(128, 64), max_iter=400,
+                                               alpha=1e-3, early_stopping=True,
+                                               n_iter_no_change=15, random_state=SEED))])
     raise ValueError(algo)
+
+
+def _balance_idx(y, rng, ratio=3.0):
+    """对正类过采样到 neg/pos ≤ ratio (MLP 无 sample_weight 的替代). 返回训练索引."""
+    pos = np.where(y == 1)[0]
+    neg = np.where(y == 0)[0]
+    if len(pos) == 0 or len(neg) == 0:
+        return np.arange(len(y))
+    target_pos = int(len(neg) / ratio)
+    if target_pos > len(pos):
+        reps = rng.choice(pos, size=target_pos - len(pos), replace=True)
+        idx = np.concatenate([np.arange(len(y)), reps])
+    else:
+        idx = np.arange(len(y))
+    rng.shuffle(idx)
+    return idx
 
 
 def build(stride):
@@ -75,18 +93,21 @@ def build(stride):
 
 
 def oof_one(algo, X, Y, G, conv, folds):
-    """单算法 5fold OOF (全部类). 返回 [N,5] OOF 概率."""
-    rng = np.random.default_rng(SEED); perm = rng.permutation(len(conv))
+    """单算法 5fold OOF (全部类). 返回 [N,5] OOF 概率.
+    fold 划分用 i%folds==fi (与 cap1_macro 一致, 复现性). conv 顺序固定不 shuffle."""
+    rng = np.random.default_rng(SEED)
     oof = np.zeros((len(X), NUM))
     for fi in range(folds):
-        val = {perm[i] for i in range(len(conv)) if i % folds == fi}
-        tr = [i for i in range(len(X)) if G[i] not in val]
-        va = [i for i in range(len(X)) if G[i] in val]
+        val = {i for i in range(len(conv)) if i % folds == fi}
+        tr = np.array([i for i in range(len(X)) if G[i] not in val])
+        va = np.array([i for i in range(len(X)) if G[i] in val])
         for k in range(NUM):
             y = Y[tr, k]; spw = (len(y) - y.sum()) / max(1, y.sum())
             c = make_clf(algo, spw)
             if algo == "mlp":
-                c.fit(X[tr], y)  # MLP 无 spw, 靠数据
+                # MLP 无 sample_weight → 正类过采样到 neg/pos≤3 让它学稀有类
+                bidx = _balance_idx(y, rng, ratio=3.0)
+                c.fit(X[tr][bidx], y[bidx])
             else:
                 c.fit(X[tr], y)
             oof[va, k] = c.predict_proba(X[va])[:, 1]

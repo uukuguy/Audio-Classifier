@@ -1,9 +1,15 @@
 {
   "_schema_version": 1,
-  "session_id": "2026-05-30-vap-full",
-  "phase": "VAP/CPC 全量微调完成 — BC=0.222 与 LGBM 打平未突破，待 LB 真分校准",
-  "last_cycle": 11,
+  "session_id": "2026-05-31-fusion-075",
+  "phase": "模型融合冲0.75。context内融合nested证伪(不正交)。发现whisper T/I比context强=真正交。云端跑whisper head重出连续概率→per-class正交融合",
+  "last_cycle": 14,
   "in_flight": null,
+  "last_result": {
+    "cycle": "H-ORTHOFUSE (context×whisper 跨源融合)",
+    "verdict": "★成立(真增益非过拟合): cap1 0.6228→0.6410 (+0.0182). T借w70/I借whisper, whisper真实强(T0.656/I0.509). 提交件 orthofuse-20260531-0319 待真分",
+    "caveat": "线上估仅+0.0006(基座是lgbm_v1单模非变体F+whisper test gap≈0用ctx gap外推高估). 冲0.75需把whisper T/I叠到变体F强基座",
+    "whisper_probs": "tools/runs/climb/whisper-fusion-20260531-0143/probs.npz (oof+test连续概率已存本机)"
+  },
   "confirmed": [
     {
       "run": "variant-F-20260528-0559",
