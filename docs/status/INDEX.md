@@ -10,10 +10,11 @@
 | `CURRENT-STATE.md` | 结构快照：架构、关键文件、当前焦点 | 🟢 active |
 | `RESUME-NEXT-SESSION.md` | session 交接棒（恢复用 `/project-state resume`） | 🟢 active |
 | `JOURNAL.md` | append-only 事件日志 | 🟢 active |
+| `DECISIONS.md` | 架构/范式决策账本（D-1 VAP路线证伪 / D-2 转攻T/I） | 🟢 active |
 | `2026-05-28-sliced-cv-audit.md` | 切片化验证集审计：cap1 可信 CV(gap+0.118→+0.055)，BC 真瓶颈非假象 | 🟢 active |
 | `2026-05-29-lora-finetune-plan.md` | LoRA 微调 whisper-large-v3 攻 BC 方案（冻结路线 falsified 后的下一步） | 🟡 decision-history |
 | `2026-05-29-diagnosis-zero-lift.md` | **零提升根因诊断（9-agent workflow）**：真根因=数据规模杠杆非频率错配；下一步3动作（动作1文本按类隔离最高ROI） | 🟡 decision-history |
-| `2026-05-30-vap-paradigm-pivot.md` | **★范式转向 research：whisper错(ASR族+193ms)→VAP/CPC(turn-taking学术SOTA,因果,小快,自带预训练,BC微调+0.3)**。下一步主线 | 🟢 active |
+| `2026-05-30-vap-paradigm-pivot.md` | 范式转向 research（whisper→VAP/CPC）。**VAP 路线已证伪(见 DECISIONS D-1)，文档为历史** | 🔴 superseded |
 | `2026-05-30-candidate-models-fusion.md` | **候选模型+融合方案(后面做)**：VAP-HuBERT/MMS仓库自带零成本/双encoder集成/LGBM动作3鲁棒化/LGBM基座只换BC列 | 🟢 active |
 
 ## 跨会话记忆（MEMORY，恢复入口）
