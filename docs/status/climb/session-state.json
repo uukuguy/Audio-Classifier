@@ -1,42 +1,39 @@
 {
   "_schema_version": 1,
   "session_id": "2026-05-31-fusion-075",
-  "phase": "模型融合冲0.75。context内融合nested证伪(不正交)。发现whisper T/I比context强=真正交。云端跑whisper head重出连续概率→per-class正交融合",
+  "phase": "模型融合冲0.75。context内融合nested证伪(不正交)。跨源context×whisper per-class正交融合成立(真分破SOTA)。下一步:whisper T/I增益叠变体F 5seed强基座",
   "last_cycle": 14,
   "in_flight": null,
   "last_result": {
     "cycle": "H-ORTHOFUSE (context×whisper 跨源融合)",
-    "verdict": "★成立(真增益非过拟合): cap1 0.6228→0.6410 (+0.0182). T借w70/I借whisper, whisper真实强(T0.656/I0.509). 提交件 orthofuse-20260531-0319 待真分",
-    "caveat": "线上估仅+0.0006(基座是lgbm_v1单模非变体F+whisper test gap≈0用ctx gap外推高估). 冲0.75需把whisper T/I叠到变体F强基座",
+    "verdict": "★★★成立(真分铁证): 真分0.71529 破SOTA +0.002866 vs 变体F 0.712424. cap1 0.6228→0.6410(+0.0182). T借w70/I借whisper, whisper在T/I真实强(T0.656/I0.509). gap +0.0743",
+    "caveat": "增益偏小因融合基座是lgbm_v1单模(0.6228)非变体F 5seed(0.6402). 冲0.75需把whisper T/I叠到变体F强基座",
     "whisper_probs": "tools/runs/climb/whisper-fusion-20260531-0143/probs.npz (oof+test连续概率已存本机)"
   },
   "confirmed": [
     {
+      "run": "orthofuse-20260531-0319",
+      "online": 0.71529,
+      "cv_cap1": 0.6410,
+      "note": "★NEW SOTA。context×whisper跨源per-class正交融合(T借w70/I借whisper). +0.002866 vs 变体F. gap +0.0743"
+    },
+    {
       "run": "variant-F-20260528-0559",
       "online": 0.712424,
       "cv_cap1": 0.6402,
-      "note": "SOTA。5seed概率平均集成+cycle1固定阈值"
+      "note": "前SOTA。5seed概率平均集成+cycle1固定阈值。仍是orthofuse的context基座来源(单模lgbm_v1)"
     },
     {
       "run": "20260527-1636-h001-context-only",
       "online": 0.710789,
       "cv": 0.5908,
-      "note": "前SOTA(cycle1纯上下文LGBM)"
+      "note": "首个SOTA(cycle1纯上下文LGBM)"
     }
   ],
-  "pending_lb": [
-    {
-      "run": "vap-full",
-      "paradigm": "vap-cpc-stereo",
-      "cv_cap1": 0.6403,
-      "bc_f1": 0.2222,
-      "predicted_online": "0.64-0.67",
-      "note": "first-of-paradigm。CSV已拉回本机待用户提交。分布复刻whisper-full(NA=1000/I=261过正例)"
-    }
-  ],
-  "best_online": 0.712424,
-  "next_hypothesis": "待定 — VAP单模未突破，候选: HuBERT/MMS encoder 换 / VAP当BC列融合LGBM / 验证VAP-BC与LGBM-BC互补性",
-  "next_action": "用户提交 vap-full pred_test1.csv → 贴回真分 → 校准 vap-cpc-stereo paradigm gap → 决定路线",
+  "pending_lb": [],
+  "best_online": 0.71529,
+  "next_hypothesis": "【最高ROI】whisper T/I叠变体F 5seed强基座:当前orthofuse的context基座是lgbm_v1单模(cap1 0.6228),换成变体F 5seed(cap1 0.6402)做基座,T/I仍借whisper→把+0.0182叠到更高起点。前置:改gen_variants.py让变体F存cap1 OOF+test连续概率npz",
+  "next_action": "改 tools/climb/gen_variants.py 存变体F cap1 OOF+test连续概率npz → cycle_orthofuse.py 用变体F基座+whisper T/I → nested验证 → 涨了生成提交件",
   "falsified_routes": [
     "context-v2 (线上0.683)",
     "廉价声学(BC无效)",
@@ -46,8 +43,10 @@
     "whisper本机不可行(卡机/太慢)",
     "切片阈值变体B(砸NA)",
     "rank平均集成C(BC崩)",
-    "cloud-whisper-large-v3-vap 冻结encoder+小头(最高0.671<<SOTA 0.712)"
+    "cloud-whisper-large-v3-vap 冻结encoder+小头(最高0.671<<SOTA 0.712)",
+    "context内融合grid/stacking(真分0.679<<SOTA, 4成员不正交nested过拟合, BC0.364→0.200蒸发)",
+    "VAP-CPC全量微调单模(真分0.679, vap-cpc-stereo gap≈-0.01, BC0.222与LGBM打平未兑现文献BC+0.3)"
   ],
-  "last_updated": "2026-05-30T08:06:00",
-  "_note": "climb cycle 11: VAP/CPC全量微调。BC=0.222与LGBM基座打平，文献期望BC+0.3未兑现。提交分布复刻whisper-full(0.671 falsified)模式。待真分确认。"
+  "last_updated": "2026-05-31T05:18:00",
+  "_note": "climb cycle 14 收口: orthofuse真分0.71529破SOTA(跨源融合成立,真分铁证). context内融合(grid/stacking)真分0.679证伪. VAP-CPC单模真分0.679证伪. 前10门槛0.7285差0.013. 下一步whisper T/I叠变体F强基座冲0.75。"
 }

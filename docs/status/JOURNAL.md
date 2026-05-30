@@ -250,3 +250,4 @@
 - 03:19 ★★context×whisper跨源融合成立(真增益非过拟合):per-class-best cap1 0.6228→0.6410(+0.0182)。T选w70(0.7ctx+0.3wsp)0.658/I选whisper 0.509,whisper真实强(T0.656/I0.509 vs ctx0.621/0.455)。区别grid过拟合:固定权重凸组合无cap1搜索+标签对齐✓,BC守ctx0.20没假涨。提交件orthofuse-20260531-0319 pos c975/na947/i89/bc27/t507(I 64→89健康)
 - 03:20 ★诚实校准:线上估0.7130仅+0.0006 vs SOTA。两原因①融合基座lgbm_v1单模(0.6228)非变体F 5seed(0.6402)②whisper test gap≈0非ctx+0.072用ctx gap外推高估。冲0.75下一步:whisper T/I增益叠变体F强基座,非单模lgbm
 - 03:30 commit 121b9a8: 跨源融合成立+context内融合证伪+融合脚本+D-6/D-7。post-commit自动regen research-tree
+- 05:20 环境收口session: CC symlink→156+锁版本(防跳158) / PostToolUse hook error根因=GSD门禁`[-d .planning]&&exec`无.planning短路exit1(非bug)修为`||exit0`×8 / climb状态落盘(session-state best→0.71529+confirmed加orthofuse+pending清空). 不碰用户私有赛题要求.md+手册.pdf

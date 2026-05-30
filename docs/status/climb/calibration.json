@@ -82,6 +82,26 @@
       "last_3_gaps": [],
       "last_updated": null,
       "_note": ""
+    },
+    "context-whisper-orthofuse": {
+      "n_samples": 1,
+      "mean_gap": 0.0743,
+      "std_gap": null,
+      "last_3_gaps": [
+        0.0743
+      ],
+      "last_updated": "2026-05-31T04:10:00",
+      "_note": "n=1: orthofuse cap1 0.6410 → 线上 0.71529 = NEW SOTA +0.0029 vs 变体F 0.7124。★跨源融合成立(真增益非过拟合): T借w70-whisper/I借whisper, whisper在T/I真实强。gap +0.0743 ≈ context paradigm +0.067(略高,whisper T/I test增益叠加)。冲0.75下一步: 把whisper T/I叠到变体F 5seed强基座(当前基座是lgbm_v1单模0.6228非变体F 0.6402)。"
+    },
+    "ensemble-grid": {
+      "n_samples": 1,
+      "mean_gap": 0.0594,
+      "std_gap": null,
+      "last_3_gaps": [
+        0.0594
+      ],
+      "last_updated": "2026-05-31T04:10:00",
+      "_note": "n=1: grid加权融合(context内4成员)。local用nested诚实估计0.6198(非cap1虚高0.6655) → 线上0.679138 = -0.0333 vs SOTA。gap +0.0594接近context正常gap=线上低不是gap问题而是cap1本身过拟合(BC 0.364→nested 0.200蒸发)。★context内融合证伪: 4成员不正交,grid搜5^4权重在369样本上过拟合。融合正交性来自信号源不同(D-6)。"
     }
   }
 }
