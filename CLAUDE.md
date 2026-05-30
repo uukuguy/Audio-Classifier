@@ -27,7 +27,7 @@ cp tools/climb/hooks/post-commit .git/hooks/post-commit && chmod +x .git/hooks/p
 
 - **Metric**: Macro-F1（5 类 F1 等权平均，sklearn `f1_score`，提交是硬 0/1）
 - **因果约束**: 只用过去信息，不读未来音频/标签
-- **目标**: 前 3（线上 ≥0.7357），保底前 10（≥0.7192）。榜首极密集，#1→#10 仅差 0.028
+- **目标**: 前 3（线上 ≥0.7357），保底前 10（**真门槛 ≥0.7285**，非首日榜的 0.7192——榜后续上移，2026-05-27 后用户已纠正）。榜首极密集，#1→#10 仅差 0.022。当前 SOTA = orthofuse **0.71529**（距前10 还差 0.013）。
 - 完整决策契约见 `docs/plans/2026-05-27-finvcup-turn-taking-CONTEXT.md`
 
 ### 数据布局
@@ -57,15 +57,16 @@ cp tools/climb/hooks/post-commit .git/hooks/post-commit && chmod +x .git/hooks/p
 
 正确做法：①阈值接近 0.5 / 只轻调；②或用**模拟 test 的 30s 切片化验证集**调阈值（见 CONTEXT Decision 4）；③**per-class-aware，不一刀切**：C 类 94% 恒正，安全于低阈值（~0.05），用 [0.35,0.65] floor 反而砍崩 C（974→348 正例，实测 −0.05）。只有 T/I/BC 这些中低频类怕激进阈值。**激进逐类阈值搜索 = 在错配分布上过拟合。**
 
-### BC 诊断链（2026-05-27，3 cycle 实测排除便宜路线）
+### BC 诊断链（已闭合 — 不要重走，2026-05-31 终态）
 
-BC（backchannel）是 Macro-F1 瓶颈类。手工特征 + LGBM 对 BC 彻底到顶：
-- context 标签 → BC F1 **0.217**
-- + 廉价声学特征（energy/zcr/voicing/双声道对比）→ **0.219**（无效）
-- + ASR 词汇统计（BC词频/距/通道）→ **0.201**（无效甚至略降）
+> ⚠️ **BC 探索已全路径证伪闭合，停止单点攻坚。** 完整决策链见 `docs/status/DECISIONS.md` D-1/D-4/D-6/D-7，negative cache 见 MEMORY `reference_negative_cache.md`。下面是结论，不是待办。
 
-**结论：BC 真需神经编码器**——Qwen 语义（理解"对方会不会插话"的时机）或 SSL 音频（细粒度韵律/onset）。词袋/粗声学抓不到"未来 2s 会不会 BC"的预测问题。
-**意外收获**：文本词汇特征帮了 **T（0.54→0.58）和 I（0.44→0.49）**——文本该救 T/I，不是 BC。
+**终态结论**：
+- **冻结路线下 BC ≈ 0.22 是极限**（context 时序 0.217 / 廉价声学 0.219 / 词汇 0.201 / VAP 各 pool ≤0.222 / 冻结 whisper/mel <0.22 / F0 最强但融合仅 +0.005）。所有信号源 r≈0.13，无强信号 → "未来 2s 会不会 BC"本身高度难预测（D-4）。
+- **可学 encoder 能顶到 0.267**（LoRA whisper cap5），证明音频里有更多 BC 信号、冻结提不出；**但全量 30-63h 不可行**，cap5 欠拟合线上仅 0.6155（D-7）。
+- **2026-05-27 旧判断"BC 真需神经编码器"已被后续证伪**——VAP/CPC/Omni/HuBERT 等神经路线全否（D-1）；榜首也没把 BC 做高（用户榜单分布证），BC 不是天花板。
+
+**战略已转向**（D-2 → D-6）：放弃硬攻 BC，转**全类各榨一点 + 跨源正交融合**。意外收获兑现：**文本/whisper 帮 T/I**（T 0.54→0.58 文本、whisper T=0.667>context；I whisper=0.555>context）——orthofuse 借 whisper 的 T/I 已破 SOTA（0.71529）。**文本/音频该救 T/I，不是 BC。**
 
 ### 架构铁律（2026-05-27，杀掉 Qwen3 提取后确认）
 
