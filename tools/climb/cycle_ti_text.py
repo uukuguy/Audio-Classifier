@@ -36,6 +36,45 @@ LAB = {0: "C", 1: "T", 2: "BC", 3: "I", 4: "NA"}
 NUM, CTX, TGT, CHUNK_MS, SEED = 5, 375, 25, 80, 42
 
 
+def robust_text_feats(utts: list[dict], end_ms: int) -> list[float]:
+    """train/test 鲁棒文本特征 (修 H-T6 发现的 bug: 去标点依赖 + 去绝对密度).
+    只用: ①比例/率(非绝对计数, 对 test 高密度鲁棒) ②train/test 都有的字词
+    (BC词/吗/呢是字, 非标点 ？。). 验证: BC词率 test11.4% vs train14.2% 接近."""
+    past = [u for u in utts if int(u.get("end_ms", 0)) <= end_ms]
+    f = []
+    for win_ms in (2000, 5000, 10000):
+        lo = end_ms - win_ms
+        w = [u for u in past if int(u.get("end_ms", 0)) > lo]
+        n = max(1, len(w))
+        n_bc = sum(1 for u in w if str(u.get("text", "")).strip().rstrip("。") in BC_WORDS)
+        n_short = sum(1 for u in w if len(str(u.get("text", "")).strip().rstrip("。")) <= 3)
+        n_q = sum(1 for u in w if ("吗" in str(u.get("text", "")) or "呢" in str(u.get("text", ""))))
+        ch = [0, 0]
+        for u in w:
+            ch[0 if int(u.get("channel_id", 1)) == 1 else 1] += 1
+        # 全部用比例 (率), 不用绝对数
+        f.append(n_bc / n)                       # BC词占比
+        f.append(n_short / n)                    # 短发声占比
+        f.append(n_q / n)                        # 疑问(吗呢)占比
+        f.append(abs(ch[0] - ch[1]) / n)         # 双声道不平衡率
+        f.append(min(ch) / n)                    # 双声道并发率(重叠代理→I)
+    # 最近发声: BC词? 通道? (不用标点) + 距最近BC词(归一化)
+    if past:
+        lastu = past[-1]
+        lt = str(lastu.get("text", "")).strip().rstrip("。")
+        f.append(1.0 if lt in BC_WORDS else 0.0)
+        f.append(1.0 if ("吗" in lt or "呢" in lt) else 0.0)        # 末句疑问字(无标点)
+        f.append(min(1.0, len(lt) / 15.0))                          # 末句长度(完整turn代理, 无标点)
+        last_bc_dist = 1.0
+        for u in reversed(past):
+            if str(u.get("text", "")).strip().rstrip("。") in BC_WORDS:
+                last_bc_dist = min(1.0, (end_ms - int(u.get("end_ms", 0))) / 10000.0); break
+        f.append(last_bc_dist)
+    else:
+        f += [0.0, 0.0, 0.0, 1.0]
+    return [float(x) for x in f]
+
+
 def ti_enhanced_feats(utts: list[dict], end_ms: int) -> list[float]:
     """T/I 专属增强: 句末完成度 / 双声道重叠 / 换人模式 / 疑问对齐预测点."""
     past = [u for u in utts if int(u.get("end_ms", 0)) <= end_ms]
@@ -96,8 +135,10 @@ def build(conv_ids, mode: str):
                 feat = base
             elif mode == "B":
                 feat = np.concatenate([base, text_feats(utts, end_ms)])
-            else:  # C
+            elif mode == "C":
                 feat = np.concatenate([base, text_feats(utts, end_ms), ti_enhanced_feats(utts, end_ms)])
+            else:  # R = robust (train/test 鲁棒, 修标点/密度 bug)
+                feat = np.concatenate([base, robust_text_feats(utts, end_ms)])
             fut = set(int(x) for x in a[e:e + TGT])
             X.append(feat)
             Y.append([1 if k in fut else 0 for k in range(NUM)])
@@ -160,7 +201,7 @@ def do_submit():
     阈值策略 (铁律): C/NA/BC 用 cycle1 固定; T/I 用 cap1-OOF 调但限温和 [0.4,0.65]."""
     conv_ids = sorted(Path(p).stem for p in glob.glob("data/train/labels/*.npy"))
     print(f"[ti-submit] building train (mode C)...", file=sys.stderr)
-    X, Y, G = build(conv_ids, "C")
+    X, Y, G = build(conv_ids, args.mode)
     oof = oof_all(X, Y, G, conv_ids, args.folds)
 
     # 阈值: 全用变体F SOTA 固定阈值 (铁律: 只换特征不调阈值, 保 test 分布)
@@ -171,7 +212,7 @@ def do_submit():
 
     # 全量 refit → test. ★5seed 概率平均集成 (变体F 关键: 单模型对文本特征过拟合
     # 出假T正例, 5seed概率平均降方差把不稳定正例压回 — 修 t=709 暴涨根因)
-    Xte, seg_ids = build_test("C")
+    Xte, seg_ids = build_test(args.mode)
     run = Path(args.run_dir); run.mkdir(parents=True, exist_ok=True)
     NSEED = 5
     preds = {}
@@ -230,8 +271,10 @@ def build_test(mode: str):
             feat = base
         elif mode == "B":
             feat = np.concatenate([base, text_feats(utts, end_ms)])
-        else:
+        elif mode == "C":
             feat = np.concatenate([base, text_feats(utts, end_ms), ti_enhanced_feats(utts, end_ms)])
+        else:  # R
+            feat = np.concatenate([base, robust_text_feats(utts, end_ms)])
         X.append(feat)
     return np.array(X, dtype=np.float32), seg_ids
 
@@ -243,6 +286,7 @@ def main():
     ap.add_argument("--stride", type=int, default=40)
     ap.add_argument("--submit", action="store_true", help="生成 test CSV (mode C) + 分布检查")
     ap.add_argument("--run-dir", default="tools/runs/climb/ti-text")
+    ap.add_argument("--mode", default="R", choices=["B","C","R"], help="提交特征模式(R=鲁棒)")
     args = ap.parse_args()
 
     if args.submit:
@@ -252,7 +296,7 @@ def main():
     print(f"[ti-text] {len(conv_ids)} convs stride={args.stride} folds={args.folds}", file=sys.stderr)
 
     res = {}
-    for mode, label in [("A", "ctx_v1"), ("B", "+text_lex"), ("C", "+text_lex+ti_enh")]:
+    for mode, label in [("A", "ctx_v1"), ("B", "+text_lex"), ("C", "+text_lex+ti_enh"), ("R", "+robust")]:
         X, Y, G = build(conv_ids, mode)
         oof = oof_all(X, Y, G, conv_ids, args.folds)
         per = {}

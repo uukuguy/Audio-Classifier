@@ -74,6 +74,14 @@
       "last_3_gaps": [],
       "last_updated": null,
       "_note": ""
+    },
+    "ti-text-fusion": {
+      "n_samples": 0,
+      "mean_gap": null,
+      "std_gap": null,
+      "last_3_gaps": [],
+      "last_updated": null,
+      "_note": ""
     }
   }
 }
