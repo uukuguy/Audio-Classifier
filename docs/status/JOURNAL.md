@@ -249,3 +249,4 @@
 - 03:00 ★补漏:中文音频模型+wav2vec2核实(用户指出我漏报)。全是deferred从未试:chinese-hubert-large(317M中文WenetSpeech,H-006 pending,最高潜力需报备)/chinese-wav2vec2(备选)/MMS(多语言)/emotion2vec(副语言情感=正交维度独特)。★文献矛盾:RESEARCH说chinese-hubert中文最优但vap-pivot#8说CPC>wav2vec2/MMS for VAP(已试CPC),换wav2vec2当VAP encoder文献预期更差,但chinese-hubert当独立特征源可能像whisper正交T/I。优先级:whisper(在做)>chinese-hubert(需报备)>emotion2vec>wav2vec2/MMS-VAP(文献弱)。决策门:whisper两源融合先验证跨源是否真涨,涨了chinese-hubert最值得投
 - 03:19 ★★context×whisper跨源融合成立(真增益非过拟合):per-class-best cap1 0.6228→0.6410(+0.0182)。T选w70(0.7ctx+0.3wsp)0.658/I选whisper 0.509,whisper真实强(T0.656/I0.509 vs ctx0.621/0.455)。区别grid过拟合:固定权重凸组合无cap1搜索+标签对齐✓,BC守ctx0.20没假涨。提交件orthofuse-20260531-0319 pos c975/na947/i89/bc27/t507(I 64→89健康)
 - 03:20 ★诚实校准:线上估0.7130仅+0.0006 vs SOTA。两原因①融合基座lgbm_v1单模(0.6228)非变体F 5seed(0.6402)②whisper test gap≈0非ctx+0.072用ctx gap外推高估。冲0.75下一步:whisper T/I增益叠变体F强基座,非单模lgbm
+- 03:30 commit 121b9a8: 跨源融合成立+context内融合证伪+融合脚本+D-6/D-7。post-commit自动regen research-tree
