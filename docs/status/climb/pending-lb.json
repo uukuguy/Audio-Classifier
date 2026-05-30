@@ -1,5 +1,3 @@
 {
-  "_schema_version": 1,
-  "_description": "已 push（生成提交工件）但公榜真分未回的 run。用户贴分后移除并更新 calibration。",
   "pending": []
 }

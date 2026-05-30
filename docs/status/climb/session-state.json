@@ -1,8 +1,8 @@
 {
   "_schema_version": 1,
-  "session_id": "2026-05-29-climb-lora",
-  "phase": "LoRA 微调 whisper-large-v3 — H-L1 准备就绪，待云端执行",
-  "last_cycle": 10,
+  "session_id": "2026-05-30-vap-full",
+  "phase": "VAP/CPC 全量微调完成 — BC=0.222 与 LGBM 打平未突破，待 LB 真分校准",
+  "last_cycle": 11,
   "in_flight": null,
   "confirmed": [
     {
@@ -18,9 +18,19 @@
       "note": "前SOTA(cycle1纯上下文LGBM)"
     }
   ],
+  "pending_lb": [
+    {
+      "run": "vap-full",
+      "paradigm": "vap-cpc-stereo",
+      "cv_cap1": 0.6403,
+      "bc_f1": 0.2222,
+      "predicted_online": "0.64-0.67",
+      "note": "first-of-paradigm。CSV已拉回本机待用户提交。分布复刻whisper-full(NA=1000/I=261过正例)"
+    }
+  ],
   "best_online": 0.712424,
-  "next_hypothesis": "H-L1",
-  "next_action": "云端执行: pip install peft && bash cloud/run_cloud.sh lora-smoke → lora-full",
+  "next_hypothesis": "待定 — VAP单模未突破，候选: HuBERT/MMS encoder 换 / VAP当BC列融合LGBM / 验证VAP-BC与LGBM-BC互补性",
+  "next_action": "用户提交 vap-full pred_test1.csv → 贴回真分 → 校准 vap-cpc-stereo paradigm gap → 决定路线",
   "falsified_routes": [
     "context-v2 (线上0.683)",
     "廉价声学(BC无效)",
@@ -32,6 +42,6 @@
     "rank平均集成C(BC崩)",
     "cloud-whisper-large-v3-vap 冻结encoder+小头(最高0.671<<SOTA 0.712)"
   ],
-  "last_updated": "2026-05-29T14:00:00",
-  "_note": "climb cycle 11: LoRA微调。cloud/train_lora.py 已写好，云端执行。"
+  "last_updated": "2026-05-30T08:06:00",
+  "_note": "climb cycle 11: VAP/CPC全量微调。BC=0.222与LGBM基座打平，文献期望BC+0.3未兑现。提交分布复刻whisper-full(0.671 falsified)模式。待真分确认。"
 }

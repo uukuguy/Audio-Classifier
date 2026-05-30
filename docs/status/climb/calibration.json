@@ -49,6 +49,16 @@
       "last_updated": null,
       "_note": "双声道 cross-attention 冻结编码器 VAP 式"
     },
+    "vap-cpc-stereo": {
+      "n_samples": 1,
+      "mean_gap": -0.0066,
+      "std_gap": null,
+      "last_3_gaps": [
+        -0.0066
+      ],
+      "last_updated": "2026-05-30T08:20:20",
+      "_note": "VAP官方+CPC encoder微调(unfreeze 2.17M)。全量369通cap20: cap1 CV=0.6403 BC=0.222=与LGBM基座打平(文献期望BC+0.3未兑现)。提交分布NA=1000全正/I=261过正例,复刻whisper-full(0.671 falsified)模式→预测线上0.64-0.67。待用户提交真分校准。"
+    },
     "ensemble": {
       "n_samples": 0,
       "mean_gap": null,
