@@ -1,23 +1,33 @@
 # Next-Session Handoff
 
-**Updated:** 2026-06-01 05:56（初赛代码评审包就绪 + 复赛镜像方向修正）
+**Updated:** 2026-06-01 08:42（初赛收口 — 三 Open Question 全清空，进入等待期）
 **恢复命令：`/project-state resume`**（lightweight-memory，非 gsd）
 
 ## TL;DR
 
-1. **关键修正**：上一次 handoff 写的"转复赛镜像准备"**时机不对**。读完 `docs/第十一届信也科技杯操作手册.pdf` 确认：**初赛阶段二（6/17-6/18）提交代码，无需模型权重，≤100MB**；Docker 镜像是复赛阶段一（6/20-7/7），TOP 30 才需要。
-2. **初赛代码评审包已就绪**：`submission/code-20260601.zip`（42KB，9 个 py + README + MANIFEST，全中文）。SOTA 复现链完整，已清内部 climb 术语，git ignore 不污染。
-3. **真 SOTA 锁定** = `orthofuse-20260531-0319` 真分 **0.71529**（双源 ctx+whisper，T=w70/I=whisper）。距前 10 门槛 0.7285 差 0.0135，D-1~D-12 全路径证伪。
-4. **云机仍开**（5-31 早 10:08 启动 3 路并行后未关）— 关键待办：**关机省费**。
+1. **初赛已收口**：真 SOTA = `orthofuse-20260531-0319` **0.71529**（双源 ctx+whisper，T=w70/I=whisper）。距前 10 门槛 0.7285 差 0.0135，D-1~D-12 全路径证伪闭合。
+2. **初赛代码评审包就绪**：`submission/code-20260601.zip`（42KB），等 **6/17 TOP 40 公布** 后上传。
+3. **6/1 收口三事完成**：①云机已关 ②参赛邮箱 `531045572@qq.com` 写入 CLAUDE.md 合规段 ③`57ea52c` 落盘（CURRENT-STATE 5-28→6-1 校准 + 主办方手册 PDF 入库）。
+4. **进入等待期 6/2-6/16**：无新 cycle 待跑，全路径已证伪；可做的事只有**复赛镜像前置准备**（Dockerfile 草稿、推理 pipeline 接口设计、合规报备邮件起草）。
 
-## In-flight（恢复后第一步）
+## 当前阶段时间线
 
-```bash
-# 1. 检查云端是否还有残留进程，关机省费
-ssh -p 46379 root@connect.westd.seetacloud.com "ps -ef | grep -E 'python.*cycle|train|extract' | grep -v grep | wc -l"
-# 若 0 → 关机 (AutoDL 后台)
-# 若 >0 → 杀掉再关
-```
+| 时间 | 动作 | 状态 |
+|---|---|---|
+| 6/2-6/9 | 复赛镜像前置：Dockerfile 草稿 + 推理 pipeline + 合规报备邮件起草 | 🟡 可选启动 |
+| **6/10 前** | **报备邮件 → `xinyebei@xinye.com`**（非 Qwen 模型：chinese-hubert / chinese-wav2vec2 / emotion2vec / whisper-large-v3）。**对外邮箱用 `531045572@qq.com`，不是 CC 账户** | 🔴 硬截止 |
+| 6/16 | 初赛阶段一结束（最后机会 push 新想法，配额 5/天） | |
+| **6/17 00:00** | **主办方公布 TOP 40**，平台开放代码评审通道（48h） | 🎯 触发点 |
+| 6/17-6/18 | 上传 `submission/code-20260601.zip`（≤100MB / 次） | |
+| 6/19 | TOP 30 复赛名单公布 | 🎯 触发点 |
+| 6/20-7/7 | 复赛阶段一：提交 Docker 镜像（≤20GB，模型 ≤8GB）+ 3 页技术报告 PDF | 🟡 云机届时再开 |
+
+## Next steps（按优先级）
+
+1. **🔴 起草合规报备邮件** 给 `xinyebei@xinye.com`（6/10 前发，不能拖到最后）— 列非 Qwen 模型清单 + 自陈用途。对外 from 用 `531045572@qq.com`。
+2. **🟡 复赛 Dockerfile 草稿**：CUDA base + transformers + whisper-large-v3 离线模型 + lgbm / xgb / mlp 基座 + orthofuse 跨源融合脚本。先单写不构建（构建需云机或本地 docker）。
+3. **🟡 复赛推理 pipeline 接口设计**：单段 30s 音频 + ASR JSON + context npy → 5 列 0/1 CSV，按手册 §复赛 输入输出规范。
+4. **⚫ 可选**：初赛配额仍剩，若**想到全新正交方向**（非 D-1~D-12 范围）可再 push；否则空跑等 6/17。
 
 ## 初赛代码评审包（已交付）
 
@@ -133,9 +143,8 @@ ssh -p 46379 root@connect.westd.seetacloud.com "ps -ef | grep -E 'python.*cycle|
 
 ## Open questions（下次 session 优先确认）
 
-1. **关机决策**：云机现在还开着，GPU 0% 但实例在线一直收费。要不要立刻关？
-2. **复赛真邮箱**：xinyebei@xinye.com 报备邮件的对外邮箱**问用户**（不能用 CC 账户邮箱 `girigiri@fastmail.com`）
-3. **代码评审包是否需要再 push 一次校准**：DECISIONS / RESUME / JOURNAL / CLAUDE.md 等 10 modified + 6 untracked 文件需不需要 commit 落盘？
+1. **复赛镜像前置准备是否现在启动**：还有 16 天到 6/17，可以①闲置等 TOP 40 ②提前起 Dockerfile + 推理 pipeline 草稿（TOP 30 后只剩 17 天紧）。倾向 ②，6/10 报备邮件起草是硬截止必须做。
+2. **是否还想再 push 配额**：D-1~D-12 已穷尽规划过的范式；用户若想到**全新正交方向**可再试，否则配额闲置无害（手册按历史最好成绩排名）。
 
 ## Ready-to-paste commands
 
@@ -157,15 +166,6 @@ cat docs/status/climb/session-state.json  # 动态状态
 #    去赛方平台 → 我的团队 → 提交结果 → 上传 submission/code-20260601.zip
 ```
 
-## Pending commits（10 modified + 6 untracked）
+## Pending commits
 
-需要落盘的：
-- `cloud/{extract_emotion2vec,extract_hubert,extract_w2v2}_cuda.py` + `train_head_hubert.py`（cycle 16-19 新增脚本）
-- `tools/climb/cycle19b_lgbm_sweep.py` + `cycle_orthofuse_{3src,nsrc}.py`（cycle 17-19 新增脚本）
-- `CLAUDE.md`（BC 诊断链闭合校准）
-- `cloud/train_head_cuda.py`（10seed bug 修 + WHISPER_SEED env）
-- `docs/status/{DECISIONS,JOURNAL,RESUME-NEXT-SESSION}.md` + `docs/status/climb/*`
-- `docs/赛题要求.md`（用户私有，不动）
-- `docs/第十一届信也科技杯操作手册.pdf`（主办方资料）
-
-建议下次 session 第一步：commit 这批 + push（一个 logical unit："cycle 16-19 全路径证伪闭合 + 初赛代码评审包就绪"）。
+**全清空** — 6/1 08:42 commit `57ea52c` 已落盘最后一批。working tree 仅剩 `docs/赛题要求.md`（用户私有，铁律不动）。
