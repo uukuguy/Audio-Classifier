@@ -24,3 +24,4 @@ baselines/
 tmp/
 
 catboost_info/
+submission/

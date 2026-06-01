@@ -302,3 +302,4 @@
 
 ## 2026-06-01
 - 00:57 ★初赛代码评审包就绪 submission/code-20260601.zip (42KB, 9py+README+MANIFEST 全中文). 含 SOTA 复现链 (cycle_orthofuse + cycle_stack_fusion + cloud/train_head_cuda + cloud/extract_whisper_cuda + cycle_context/v2 + sliced_cv + gen_variants), 不含权重不含数据 (符合手册要求). 已清内部 climb 术语 (H-001/D-数字/变体F docstring), 字段名保留 (代码自描述). 远低于 100MB 上限. submission/ gitignored 不污染 git
+- 06:05 落盘 16 文件 [faafeb4] cycle 16-19 全路径证伪闭合 + 初赛 SOTA 0.71529 锁定 + 7 新 cycle 脚本 (extract_{hubert,w2v2,e2v} + train_head_hubert + cycle19b/orthofuse_3src/nsrc)
