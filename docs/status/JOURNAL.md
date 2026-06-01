@@ -307,4 +307,8 @@
 - 08:42 [57ea52c] 6/1 落盘: 参赛邮箱 531045572@qq.com 写 CLAUDE.md 合规段 + CURRENT-STATE 5-28→6-1 校准 + 主办方手册PDF入库. 云机已关
 - 08:48 [fc765f0] RESUME refresh: 三 Open Question 全清空, 进入等待期 6/2-6/16. Next steps 转复赛镜像前置 + 6/10 报备邮件硬截止
 - 09:08 [9ecb5dc] 实验全盘点落盘 docs/status/2026-06-01-experiment-inventory.md (15 push 真分账本 + HOT 产物 + D-1~D-12 摘要 + 遗留 IV.A-D) + memory project_inventory_2026-06-01 + 5-30 status 降 Cold
-- 09:30 ★★★用户实况: 当前 SOTA 0.71529 = 排行榜第 37 名 (前 40 进复赛 buffer 3 名危险), 前 20 门槛 0.7243。**战略反转: D-12 接受论撤, D-13 激活前 20 攻坚** (目标 +0.009, 16 天)。三轨并行 B4 Knowledge Layer(今天)+B3 后处理+B1 ctx v3, B2 视 B4 触发
+- 09:30 ★★★[e98471e] 用户实况: SOTA 0.71529 = 排行榜第 37 名 (前 40 进复赛 buffer 3 名危险), 前 20 门槛 0.7243。**战略反转: D-12 撤, D-13 激活前 20 攻坚** (目标 +0.009, 16 天)。三轨并行 B4(今天)+B3+B1, B2 视 B4
+- 09:45 B4 完成: gemini consult + 9 路 WebSearch + 2 篇论文. 锁 N1=DB-Loss+SupCon 校准头, N2/N3 备选. B2 整通对话取消 (16 天来不及). 报告 docs/status/2026-06-01-knowledge-layer-findings.md
+- 10:08 B3d (DB-Loss+SupCon 校准头 on [ctx_lgbm_v1, whisper] OOF) 跑完 5fold×3seed×30ep, 本机 MPS 6min: OOF macro 0.5701→0.6012 (+0.031 真训练增益)
+- 10:25 ★chain-first 救命 bug: 我用错的 cap1 定义(末窗 vs 真首窗 order=0) + 错的阈值 [0.5,0.5,0.5,0.5,0.05] (BC 真该 0.75). 用对后 B3d cap1=0.6240 < SOTA 0.6410. 若不修就 push BC pos 会 27→193 触 D-11. 救回 1 次提交配额
+- 10:30 **D-14 写入**: B3d OOF 涨真但 cap1=SOTA 持平→SKIP. 本质原因=校准头没新信号源, 只重校准 ctx+whisper 等于 SOTA orthofuse. 教训: DB-Loss/SupCon 必须叠新源(hubert/Omni/F0)才涨 cap1. B1 EDA 同步出 30+个 info>0.15 强 v3 特征(runlen/burst/trans/diff). 转 B1

@@ -4,14 +4,32 @@
   "phase": "D-13 激活前 20 攻坚战。SOTA 0.71529 = 排行榜第 37 名 (前 40 进复赛, buffer 3 名危险)。目标 0.7243 (前 20 门槛, 缺 +0.009)。三轨并行: B4 Knowledge Layer 今天 / B3 后处理 / B1 ctx v3 特征工程",
   "last_cycle": 19,
   "in_flight": {
-    "task": "B4 Knowledge Layer: consult-AI + WebSearch 2025-2026 turn-taking SOTA 找 D-1~D-12 范围外全新正交信号源",
-    "host": "本机",
-    "started_at": "2026-06-01T09:30",
-    "pids": null,
-    "deadline": "2026-06-01T23:59 出报告",
-    "fallback": "若空手而归, 全力 B1+B3 并行",
-    "next_action": "执行 tools/climb/consult-ais.sh + WebSearch + 写 docs/status/2026-06-01-knowledge-layer-findings.md"
+    "task": "B1 ctx 特征工程 v3: EDA 找到 30+ 个 info>0.15 强 v3 特征 (runlen/burst/trans/diff), 下一步把它们叠到现 46d, 重训 ctx_lgbm_v1, 验证 OOF macro 涨多少",
+    "host": "本机 MPS+CPU",
+    "started_at": "2026-06-01T10:30",
+    "next_action": "写 cycle_context_v3.py: featurize_v3 加 30 个强特征, 5fold OOF + cap1 评估, 涨过 SOTA cap1+0.005 才进下一步"
   },
+  "completed_today": [
+    {
+      "task": "B4 Knowledge Layer",
+      "result": "找到 3 候选方向 N1/N2/N3. 决策: N1 DB-Loss+SupCon 优先. B2 取消 (16 天来不及)",
+      "report": "docs/status/2026-06-01-knowledge-layer-findings.md"
+    },
+    {
+      "task": "B3d DB-Loss+SupCon 校准头",
+      "result": "OOF +0.031 真训练增益, 但 cap1 = SOTA (Δ=0) → SKIP. D-14 闭合: 校准头无新源不涨 cap1. B3d/N1 路线收口",
+      "artifacts": "tools/runs/climb/b3d-calib-20260601-1008/, b3d-orthofuse-20260601-1029/"
+    },
+    {
+      "task": "Chain-first 救命 bug",
+      "result": "B3d cap1 定义错(末窗) + 阈值错(BC 0.5 应 0.75), 假高 +0.041 实际 0. 救回 1 次提交配额避 D-11"
+    },
+    {
+      "task": "B1 v3 EDA",
+      "result": "47 候选特征 vs 5 类 AUC, 找到 30+ info>0.15 强 v3 特征 (runlen_*, burst_*, trans_*, diff1/2_*)",
+      "artifacts": "docs/status/2026-06-01-b1-eda-v3-features.json"
+    }
+  ],
   "last_result": {
     "cycle": "D-12 闭合 → D-13 撤回激活前 20 攻坚",
     "verdict": "战略反转: 用户提供排名信息 (第 37 名 / 前 20 门槛 0.7243) 后 D-12 'F接受 0.71529' 失效。D-13 用前 20 门槛重新评估 D-12 自己列的 '真正未试' 4 条 (B1/B2/B3/B4) → 2 条 +0.005 可达",
