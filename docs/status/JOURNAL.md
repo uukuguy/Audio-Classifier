@@ -305,3 +305,5 @@
 - 06:05 落盘 16 文件 [faafeb4] cycle 16-19 全路径证伪闭合 + 初赛 SOTA 0.71529 锁定 + 7 新 cycle 脚本 (extract_{hubert,w2v2,e2v} + train_head_hubert + cycle19b/orthofuse_3src/nsrc)
 - 06:08 [467eb0c] gitignore 加 submission/ + JOURNAL 落盘 06:05 那行 (确保 submission/ 不被 git 误纳 + 历史完整)
 - 08:42 [57ea52c] 6/1 落盘: 参赛邮箱 531045572@qq.com 写 CLAUDE.md 合规段 + CURRENT-STATE 5-28→6-1 校准 + 主办方手册PDF入库. 云机已关
+- 08:48 [fc765f0] RESUME refresh: 三 Open Question 全清空, 进入等待期 6/2-6/16. Next steps 转复赛镜像前置 + 6/10 报备邮件硬截止
+- 09:08 实验全盘点落盘 docs/status/2026-06-01-experiment-inventory.md (15 push 真分账本 + HOT 产物 + D-1~D-12 摘要 + 遗留 IV.A-D) + memory project_inventory_2026-06-01 + 5-30 status 降 Cold

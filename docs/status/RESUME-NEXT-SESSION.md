@@ -1,14 +1,15 @@
 # Next-Session Handoff
 
-**Updated:** 2026-06-01 08:42（初赛收口 — 三 Open Question 全清空，进入等待期）
+**Updated:** 2026-06-01 09:15（初赛收口 — 实验盘点落盘）
 **恢复命令：`/project-state resume`**（lightweight-memory，非 gsd）
 
 ## TL;DR
 
 1. **初赛已收口**：真 SOTA = `orthofuse-20260531-0319` **0.71529**（双源 ctx+whisper，T=w70/I=whisper）。距前 10 门槛 0.7285 差 0.0135，D-1~D-12 全路径证伪闭合。
 2. **初赛代码评审包就绪**：`submission/code-20260601.zip`（42KB），等 **6/17 TOP 40 公布** 后上传。
-3. **6/1 收口三事完成**：①云机已关 ②参赛邮箱 `531045572@qq.com` 写入 CLAUDE.md 合规段 ③`57ea52c` 落盘（CURRENT-STATE 5-28→6-1 校准 + 主办方手册 PDF 入库）。
+3. **6/1 收口落盘完成**：①云机已关 ②参赛邮箱 `531045572@qq.com` 写入 CLAUDE.md 合规段 ③CURRENT-STATE 5-28→6-1 校准 + 主办方手册 PDF 入库 ④**实验全盘点 `docs/status/2026-06-01-experiment-inventory.md` 落盘**（15 push 真分账本 + HOT 产物路径 + 决策摘要 + 遗留 IV.A-D）。
 4. **进入等待期 6/2-6/16**：无新 cycle 待跑，全路径已证伪；可做的事只有**复赛镜像前置准备**（Dockerfile 草稿、推理 pipeline 接口设计、合规报备邮件起草）。
+5. **首要参考文档** = `docs/status/2026-06-01-experiment-inventory.md` — 一切产物路径 / 决策摘要 / 遗留任务一站式查得到，先看它再决定干什么。
 
 ## 当前阶段时间线
 
