@@ -1,33 +1,29 @@
 {
   "_schema_version": 1,
-  "session_id": "2026-05-31-fusion-075",
-  "phase": "模型融合冲0.75。context内融合nested证伪(不正交)。跨源context×whisper per-class正交融合成立(真分破SOTA)。下一步:whisper T/I增益叠变体F 5seed强基座",
+  "session_id": "2026-06-01-top20-attack",
+  "phase": "D-13 激活前 20 攻坚战。SOTA 0.71529 = 排行榜第 37 名 (前 40 进复赛, buffer 3 名危险)。目标 0.7243 (前 20 门槛, 缺 +0.009)。三轨并行: B4 Knowledge Layer 今天 / B3 后处理 / B1 ctx v3 特征工程",
   "last_cycle": 19,
   "in_flight": {
-    "task": "D-12 写入. cycle 16-19 全路径证伪. 初赛终态 = orthofuse-20260531-0319 真分 0.71529. 转复赛镜像准备",
+    "task": "B4 Knowledge Layer: consult-AI + WebSearch 2025-2026 turn-taking SOTA 找 D-1~D-12 范围外全新正交信号源",
     "host": "本机",
-    "started_at": "2026-05-31T13:40",
+    "started_at": "2026-06-01T09:30",
     "pids": null,
-    "cycle19_summary": {
-      "19c_t_i_mlp": "mlp 在 T/I cap1 上 -0.04~-0.08 系统性弱, 不只是 BC 噪声. 0 提交价值",
-      "19b_lgbm_sweep": "quick 4 组合 baseline OOF full=0.5909 = 最高, 其它 -0.002~-0.005, LGBM 在 46d+stride40 OOF 饱和"
-    },
-    "real_sota_final": "orthofuse-20260531-0319 = 0.71529 (双源 ctx + whisper, T=w70 / I=whisper)",
-    "decision_context": "全路径汇总 (cycle 16-19): ①加N源 ②ctx基座 ③T/I mlp ④LGBM sweep ⑤BC单类替换 全部证伪. 每路最大增益 <0.005, 凑不到 0.0135 缺口",
-    "next_action": "转复赛镜像准备: Docker + 推理 pipeline + README + 报备 chinese-hubert/w2v2/e2v (2026-06-10 前)"
+    "deadline": "2026-06-01T23:59 出报告",
+    "fallback": "若空手而归, 全力 B1+B3 并行",
+    "next_action": "执行 tools/climb/consult-ais.sh + WebSearch + 写 docs/status/2026-06-01-knowledge-layer-findings.md"
   },
   "last_result": {
-    "cycle": "H-ORTHOFUSE (context×whisper 跨源融合)",
-    "verdict": "★★★成立(真分铁证): 真分0.71529 破SOTA +0.002866 vs 变体F 0.712424. cap1 0.6228→0.6410(+0.0182). T借w70/I借whisper, whisper在T/I真实强(T0.656/I0.509). gap +0.0743",
-    "caveat": "增益偏小因融合基座是lgbm_v1单模(0.6228)非变体F 5seed(0.6402). 冲0.75需把whisper T/I叠到变体F强基座",
-    "whisper_probs": "tools/runs/climb/whisper-fusion-20260531-0143/probs.npz (oof+test连续概率已存本机)"
+    "cycle": "D-12 闭合 → D-13 撤回激活前 20 攻坚",
+    "verdict": "战略反转: 用户提供排名信息 (第 37 名 / 前 20 门槛 0.7243) 后 D-12 'F接受 0.71529' 失效。D-13 用前 20 门槛重新评估 D-12 自己列的 '真正未试' 4 条 (B1/B2/B3/B4) → 2 条 +0.005 可达",
+    "real_sota_final": "orthofuse-20260531-0319 = 0.71529 (双源 ctx + whisper, T=w70 / I=whisper)",
+    "decision_context": "保留 D-1~D-12 全部铁律 (cap1 选 strat / 加源 / context 内算法集成 不复活), 攻击面 = 4 条未试方向"
   },
   "confirmed": [
     {
       "run": "orthofuse-20260531-0319",
       "online": 0.71529,
       "cv_cap1": 0.6410,
-      "note": "★NEW SOTA。context×whisper跨源per-class正交融合(T借w70/I借whisper). +0.002866 vs 变体F. gap +0.0743"
+      "note": "★SOTA。context×whisper跨源per-class正交融合(T借w70/I借whisper). 排行榜第 37 名"
     },
     {
       "run": "variant-F-20260528-0559",
@@ -44,8 +40,14 @@
   ],
   "pending_lb": [],
   "best_online": 0.71529,
-  "next_hypothesis": "【最高ROI】whisper T/I叠变体F 5seed强基座:当前orthofuse的context基座是lgbm_v1单模(cap1 0.6228),换成变体F 5seed(cap1 0.6402)做基座,T/I仍借whisper→把+0.0182叠到更高起点。前置:改gen_variants.py让变体F存cap1 OOF+test连续概率npz",
-  "next_action": "改 tools/climb/gen_variants.py 存变体F cap1 OOF+test连续概率npz → cycle_orthofuse.py 用变体F基座+whisper T/I → nested验证 → 涨了生成提交件",
+  "target_online": 0.724337,
+  "gap_to_target": 0.009,
+  "current_rank": 37,
+  "target_rank": 20,
+  "next_hypothesis": "B4 Knowledge Layer 优先 (0 算力, 1 天出方向判断)。无需选下一假设, 先研究再决定 B1/B2/B3 优先级",
+  "next_action": "tools/climb/consult-ais.sh 三方 quorum + WebSearch + 写 docs/status/2026-06-01-knowledge-layer-findings.md (1 天截止)",
+  "push_floor_cap1": 0.6460,
+  "push_floor_reason": "D-13 + D-9 noise floor 0.003 校准: SOTA cap1 0.6410 + 0.005 = 0.6460, 才有 +0.001 线上信号期望",
   "falsified_routes": [
     "context-v2 (线上0.683)",
     "廉价声学(BC无效)",
@@ -57,8 +59,18 @@
     "rank平均集成C(BC崩)",
     "cloud-whisper-large-v3-vap 冻结encoder+小头(最高0.671<<SOTA 0.712)",
     "context内融合grid/stacking(真分0.679<<SOTA, 4成员不正交nested过拟合, BC0.364→0.200蒸发)",
-    "VAP-CPC全量微调单模(真分0.679, vap-cpc-stereo gap≈-0.01, BC0.222与LGBM打平未兑现文献BC+0.3)"
+    "VAP-CPC全量微调单模(真分0.679, vap-cpc-stereo gap≈-0.01, BC0.222与LGBM打平未兑现文献BC+0.3)",
+    "LoRA whisper 全量(30-63h不可行)/cap5欠拟合(线上 0.6155)",
+    "加 4/5 源 (w2v2/e2v cap1 0 贡献, D-10)",
+    "BC cap1 选 strat (mlp+whisper_70 cap1 +0.108 → 真分 -0.022, D-11)",
+    "LGBM 超参 sweep (baseline 即最优, D-12)"
   ],
-  "last_updated": "2026-05-31T05:18:00",
-  "_note": "climb cycle 14 收口: orthofuse真分0.71529破SOTA(跨源融合成立,真分铁证). context内融合(grid/stacking)真分0.679证伪. VAP-CPC单模真分0.679证伪. 前10门槛0.7285差0.013. 下一步whisper T/I叠变体F强基座冲0.75。"
+  "active_routes_D13": [
+    "B1 ctx 特征工程 v3 (本机 1-2 天, 期望 +0.003~0.010)",
+    "B2 整通对话神经预测 (云上 1-2 天, 条件触发待 B4)",
+    "B3 后处理 / TTA / 半监督 (本机 0.5-1 天, 期望 +0.001~0.005)",
+    "B4 Knowledge Layer (今天 0 算力, 找全新正交信号源)"
+  ],
+  "last_updated": "2026-06-01T09:30:00",
+  "_note": "D-13 激活: 撤 D-12 接受论, 前 20 攻坚战启动。完整作战图见 docs/status/2026-06-01-top20-attack-plan.md, D-13 决策见 DECISIONS.md。push 门重校准 cap1 ≥0.6460。"
 }

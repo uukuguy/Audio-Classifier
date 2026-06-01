@@ -55,5 +55,12 @@
 
 <!-- TARGET-BEGIN (机器可读, check-target.py 读; LB 落/cycle 末自动判定 §4.1) -->
 target_metric: online
-target_value: 0.75
+target_value: 0.724337
 <!-- TARGET-END -->
+
+## 2026-06-01 D-13 target 更新
+
+- 旧 target 0.75 (前 3 / 前 10 冲击) 失效, 当前真分 0.71529 = 排行榜第 37 名 (前 40 进复赛, buffer 3 名)
+- 新 target = **0.724337** (前 20 真门槛), 缺 +0.009
+- 失效条件: 三轨全跑 cap1 <0.6460 或 push 2 次线上无 +0.003 → 回 D-12
+- 作战图: `docs/status/2026-06-01-top20-attack-plan.md`

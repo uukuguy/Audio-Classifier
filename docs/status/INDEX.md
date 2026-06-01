@@ -17,6 +17,7 @@
 | `2026-05-30-vap-paradigm-pivot.md` | 范式转向 research（whisper→VAP/CPC）。**VAP 路线已证伪(见 DECISIONS D-1)，文档为历史** | 🔴 superseded |
 | `2026-05-30-candidate-models-fusion.md` | **候选模型+融合方案(后面做)**：VAP-HuBERT/MMS仓库自带零成本/双encoder集成/LGBM动作3鲁棒化/LGBM基座只换BC列 | 🔴 superseded(D-1/D-8 否) |
 | `2026-06-01-experiment-inventory.md` | **★ 6/1 实验全盘点**：15 个 push 真分账本 + HOT 产物路径 + D-1~D-12 决策摘要 + 遗留任务 IV.A-D | 🟡 decision-history |
+| `2026-06-01-top20-attack-plan.md` | **🚨 前 20 攻坚作战图**：D-13 激活，三轨并行（B4 Knowledge Layer / B3 后处理 / B1 ctx v3）+ push 门 cap1≥0.6460 + milestone | 🟢 active |
 
 ## 跨会话记忆（MEMORY，恢复入口）
 
