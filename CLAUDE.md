@@ -62,6 +62,7 @@ cp tools/climb/hooks/post-commit .git/hooks/post-commit && chmod +x .git/hooks/p
 > ⚠️ **BC 探索已全路径证伪闭合，停止单点攻坚。** 完整决策链见 `docs/status/DECISIONS.md` D-1/D-4/D-6/D-7，negative cache 见 MEMORY `reference_negative_cache.md`。下面是结论，不是待办。
 
 **终态结论**：
+
 - **冻结路线下 BC ≈ 0.22 是极限**（context 时序 0.217 / 廉价声学 0.219 / 词汇 0.201 / VAP 各 pool ≤0.222 / 冻结 whisper/mel <0.22 / F0 最强但融合仅 +0.005）。所有信号源 r≈0.13，无强信号 → "未来 2s 会不会 BC"本身高度难预测（D-4）。
 - **可学 encoder 能顶到 0.267**（LoRA whisper cap5），证明音频里有更多 BC 信号、冻结提不出；**但全量 30-63h 不可行**，cap5 欠拟合线上仅 0.6155（D-7）。
 - **2026-05-27 旧判断"BC 真需神经编码器"已被后续证伪**——VAP/CPC/Omni/HuBERT 等神经路线全否（D-1）；榜首也没把 BC 做高（用户榜单分布证），BC 不是天花板。
@@ -103,8 +104,6 @@ DEST=~/.cache/manual_models/<model>; mkdir -p $DEST
 curl -sL -o $DEST/config.json "https://hf-mirror.com/<org>/<model>/resolve/main/config.json"  # 等
 AutoModel.from_pretrained("~/.cache/manual_models/<model>")
 ```
-
-ModelScope 被墙（HTTP 000）；HF/hf-mirror 可达。
 
 ### MPS 特征提取速度（实测，决定哪些编码器本机可行）
 

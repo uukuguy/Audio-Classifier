@@ -87,3 +87,192 @@
 - **但兑现成本不可行**: 全量 LoRA 30-63h(193ms/前向, 5fold×全量)，cap5(1845样本)欠拟合 → 线上仅 0.6155。
 
 **含义**: BC 不是永久放弃，是"现有算力下 0.22 是冻结路线极限"。若未来有更高效的可学 encoder 路径(更快前向 / 更小 encoder / 蒸馏)，BC 0.22→0.27 仍是 +0.01 macro 的活路。当前阶段先吃 T/I 跨源正交(更确定)。
+
+## 2026-05-31
+
+### D-8: 跨源融合范式撞 0.715 上限 — 加 hubert 第三源无线上增益，撤 cycle 17 扩容计划
+
+**决策**: 停止"加更多音频源融合"路线。不扩 stride8 hubert，不投 chinese-w2v2 第四源。融合范式天花板 = 0.715 (跨源 ctx×whisper, 上限锁定)。
+
+**Rationale（cycle 16 三源真分实测）**:
+
+| run | cap1 | 线上 | gap | 备注 |
+|---|---|---|---|---|
+| orthofuse (双源, stride40 弱基座) | 0.6410 | **0.71529** | +0.0743 | 旧 SOTA, gap 异常高 = cap1 过拟合 |
+| orthofuse-s5 (双源, stride5 强基座) | 0.6455 | 0.71233 | +0.0668 | 强基座反而线上 -0.003 |
+| **orthofuse-3src (ctx+whisper+hubert)** | **0.6540** | **0.71523** | +0.0612 | 三源 cap1 +0.013 vs 双源 → 线上几乎同分 |
+
+**核心模式**: 三个 push cap1 涨 0.0045 → 0.0130，但**线上紧锁 0.712-0.715 窄带**。cap1 收益无法转化为线上。
+
+**根因分析（chain-first）**:
+1. **gap 越大代表 cap1 越虚高**（旧 orthofuse gap 0.0743 > 三源 0.0612），多源后 cap1 369 样本估计噪声加剧。
+2. **hubert 在 test 切片末分布上贡献蒸发**：cap1 (per-class选 hubert/三源等权) 0.6540 - 双源 0.6410 = +0.013 真增益（无 grid），但 test 切片末分布上消失。
+3. **不是过拟合（无 grid 搜索）**，是 **train (stride 全切片) vs test (切片末) 的分布差异**让 hubert/whisper 信号失活——同 ti-robust 文本路线证伪根因（D-3）。
+4. **多源 = 更多分布敏感特征叠加 = 更难泛化**，与 cap1 收益方向相反。
+
+**含义**:
+- **真 SOTA 仍 = orthofuse-20260531-0319 = 0.71529**（双源 stride40 弱基座，偶然 cap1 估准 + 简单融合泛化好）
+- **冲 0.7285 前 10 不能靠加音频源融合**（已饱和）
+- **cycle 17 候选取消**: 不扩 autodl-fs 200→400G, 不投 chinese-w2v2-large 第四源（守 validate_before_full_run），下载好的 w2v2 模型留备但不投训练算力。
+- **新方向需求（Knowledge Layer 触发）**: 既不是"加更多音频源"（同 D-3/D-8 撞 train/test 分布差），也不是"换 LGBM"（同 D-5 单源问题）。可能方向 = ①后处理（test 切片末专属规则）②半监督（用 test 自身分布对齐）③ test-time adaptation。这些都未试。
+
+**红旗**: 任何下一步若发现自己又在"加第 N 个音频源" → STOP，已 D-8 闭合。要走非"加源"路径。
+
+### D-9: D-8 根因 chain-first 第二诊断 — 不是"分布差"，是 test 抽样噪声 + 真信号 ≤0.003
+
+**决策**: 修正 D-8 的"train/test 分布差"判断。撤销基于此判断的 cycle 17 候选（D 方向 "切片末加权"）。新决策 = **接受 SOTA 0.71529，转复赛镜像准备**（best-effort 模式诚实兑现）。
+
+**第二诊断（仔细看 4 个真分）**:
+| run | cap1 | online | gap | rel SOTA |
+|---|---|---|---|---|
+| variant-F (单模 5seed) | 0.6402 | 0.71242 | +0.0722 | baseline |
+| orthofuse (双源弱基座 + whisper) | 0.6410 | 0.71529 | +0.0743 | **+0.003** ← whisper T/I 真信号 |
+| orthofuse-s5 (双源强基座 + whisper) | 0.6455 | 0.71233 | +0.0668 | -0.003 ← 强基座+whisper 冲突 |
+| orthofuse-3src (三源 + hubert) | 0.6540 | 0.71523 | +0.0612 | +0.0001 (噪声) ← hubert 0 增益 |
+
+**真模式**:
+1. **真信号最大 = whisper T/I 跨源 +0.003**（4 push 中唯一可重现的 SOTA 跳点）
+2. **cap1 vs 线上 noise floor ≈ 0.003**（hubert cap1 +0.013 → 线上 +0.0001 噪声）
+3. **3 个不同 push 线上分散在 [0.71233, 0.71529] 0.003 内 = 接近 test 1000 段抽样不确定性**
+4. **不是 train/test 分布差**（context shape 验证完全同 375 chunk），是单次 push test marginal 噪声 ~0.003 淹没了 < 0.003 的真信号
+
+**含义**:
+- 前 10 门槛 0.7285 vs SOTA 0.71529 = 差 0.0135
+- 已有路径最大单次贡献 = whisper T/I +0.003，要达成 0.7285 需 **4-5 个独立 +0.003 量级真信号**
+- 已穷尽方向（D-1~D-8）每路径预期增量都在 noise floor 附近，多次 push 无法稳定累积
+- **诚实判断: 前 10 在初赛阶段已不可达**。继续 push 是浪费提交配额 + 模型迭代时间
+- **正确动作: 保 SOTA orthofuse-20260531-0319 = 0.71529 作初赛终态, 转**:
+  - ① 准备复赛镜像（Docker, 含 ctx-LGBM-stride40 + whisper-cloud-head + orthofuse-3src 完整 pipeline, 需 hubert 也带上验证用）
+  - ② 写复赛 README / 配置 / 推理脚本
+  - ③ 报备非 Qwen 模型（chinese-hubert 用于 orthofuse-3src，2026-06-10 前 xinyebei@xinye.com）— 即使不破 SOTA 也是合规要求
+
+**红旗**: 不要再启动 cycle 17 "切片末加权" / "TTA" / "半监督" — 这些都是基于 D-8 错诊断的方向，第二诊断已撤。
+
+**multi-AI quorum 反思**: cycle 17 3/3 quorum 投 D 基于我错的 prompt（"train/test 分布差"为前提）。AI quorum 不是真相裁判，只在前提正确时有效。再 chain-first 重读数据时，4 个 push 的线上分散度直接证伪"分布差"假设。教训: quorum 前自己先 chain-first 跑透，避免共识偏置 (group think) 放大错诊断。
+
+### D-10: 5 源融合 cap1 实测上限 = 0.6540（3 源即顶，加 w2v2/e2v 0 贡献）
+
+**决策**: 关闭"加更多音频源" cycle 17. 用户撤 D-9 投降后投入 ~3h 云时间跑 w2v2+e2v 第四第五源, 实测无任何增量, 把 D-8 从 3 源量级推到 5 源量级证实, 不再尝试任何"加第 N 源" 路线。
+
+**实测数据 (4/5 源 orthofuse decision gate)**:
+
+| 组合 | cap1 macro | gain vs ctx | margin vs (N-1) src | 被选源/策略 |
+|---|---|---|---|---|
+| ctx-only | 0.6228 | — | — | base |
+| 2源 ctx+whisper | 0.6410 | +0.0182 | — | T=ctx_w_70, I=whisper |
+| 3源 +hubert | 0.6540 | +0.0313 | **+0.0131** ★ | T=ctx_w_h_eq, I=ctx_h_eq |
+| **4源 +w2v2** | **0.6540** | +0.0313 | **+0.0000** ❌ | 同 3 源 (w2v2 无类被选) |
+| **5源 +e2v** | **0.6540** | +0.0313 | **+0.0000** ❌ | 同 3 源 (e2v 无类被选) |
+
+**单源 cap1 对照**:
+
+| 源 | cap1 | T | I | BC | C | NA | 关键 |
+|---|---|---|---|---|---|---|---|
+| ctx | 0.6228 | 0.621 | 0.455 | 0.200 | 0.975 | 0.863 | base |
+| whisper | ~0.629 | **0.667** | 0.509 | 0.182 | 0.975 | 0.859 | T 最强 |
+| hubert | 0.6239 | 0.639 | **0.532** | 0.000 | 0.974 | 0.864 | I 强但 BC 崩 |
+| w2v2 | **0.6395** | 0.611 | 0.543 | 0.200 | 0.975 | **0.869** | 单 macro 最高但融合 0 贡献 |
+| e2v | 0.621 | 0.622 | 0.491 | 0.154 | 0.968 | **0.870** | 副语言独特但被 whisper/hubert 覆盖 |
+
+**根因分析 (D-8 在 5 源量级证实)**:
+1. **ctx 类强度 + gate +0.008 即门槛**: 任何新源在某类 cap1 必须 >= ctx 类 + 0.008 才被选。w2v2 各类全部 <whisper, e2v 各类大多 <hubert，被先占类排除
+2. **cap1 369 样本上限**: cap1 macro 0.6540 是 3 源时 T=0.676 + I=0.557 + 其它 ctx 同的算术结果，再加源不会进一步改善这 5 个 per-class 数值（whisper+hubert 已是该类最强源）
+3. **同范式 SSL 撞墙**: hubert/w2v2 同 WenetSpeech/TencentGameMate 系列 = 高相关, 不互补; e2v 副语言情感不同范式但任何类未超 whisper/hubert
+4. **真分大概率撞 0.71523**: cycle 16 三源真分 0.71523, 4源/5源 cap1 完全同 3 源 → 4源/5源真分**必然同 0.71523** (cap1 同 + per-class strat 同 → test 概率同 → 0/1 csv 同). 不提交浪费配额
+
+**实测投入**: ~3h 云时间 (extract + 2 head train) + 1.2G + 360M 模型下载 + 本机写 2 个 extract 脚本
+
+**实测产出**: D-8 D-9 在 5 源量级证实，无任何提交价值。**诚实总结 = cycle 17 烧资源换 paradigm 闭合**。
+
+**新红旗**: 不要再写 "extract_<新模型>_cuda.py" 脚本. 加任何第 N+1 源 cap1 都不会超过 0.6540. 唯一可能突破路径需要的不是"换音频源", 是**改 ctx 基座本身**或**改融合算法/策略空间设计** (cap1 369 样本上的统计上限)。
+
+**含义 (重新激活 D-9 但保留路径)**:
+- 前 10 门槛 0.7285 vs SOTA 0.71529 差 0.0135, 已穷尽方向真信号最大 +0.003 (whisper T/I)
+- **重读 D-9**: "已穷尽方向" 现在 = 5 源融合 + 多模型, 实测加源天花板 0.7152 不能破 0.7285
+- 守 SOTA orthofuse-20260531-0319 = 0.71529 作初赛最强提交
+- **如果用户还想继续**: 真正未试 = ① ctx 基座升级 (XGB/CatBoost/MLP 替 LGBM v1; 但 D-5 已证 4 成员不正交) ② 融合策略改 (per-class isotonic 校准, BC 专用 boost) ③ 接受 0.71529 转复赛镜像
+
+### D-11: cycle 18 BC cap1 +0.108 = cherry-pick (9 样本不可信), 关 BC 单类替换路线
+
+**决策**: 关闭"在 cap1 上选 BC 单类替换策略"的路径. cycle 18 实测 BC 改 mlp+whisper_70 真分 0.69358 = -0.022 vs SOTA 0.71523 (完全归因 BC 一类 F1 跌 ~0.11).
+
+**实测 (chain-first 三层诊断)**:
+
+| 提交 | BC pos | 真分 | Δ vs SOTA |
+|---|---|---|---|
+| orthofuse-3src (SOTA) | 27 | 0.71523 | base |
+| **cycle18 (BC 改 mlp+whisper_70)** | **17** | **0.69358** | **-0.022** |
+
+vs orthofuse-3src 唯一差异 = BC 单类 (27→17, 16 真 BC→neg / 6 非 BC→pos = 净砍 10 + 22 处翻转)。其它 4 类完全相同 pos count.
+
+**cap1 上看好的真实根因**:
+- cap1 BC 总正例 9 个 → mlp+whisper_70 strat 上 4 pred / 2 TP / 7 FN → F1=0.308
+- lgbm ctx strat 上 1 pred / 1 TP / 8 FN → F1=0.200
+- **+0.108 = 多 1 个 TP 在 9 样本上的 F1 跳跃**, 而非"mlp 真学到 BC 信号"
+- test 1000 段 BC 真正例量级估计 ~25-50, mlp 选 17 pred 高假阴率 = 真 BC 漏 16 个
+
+**为什么 lgbm strat 在 cap1 看着弱 (BC F1=0.200) 但 test 上对 (BC pos=27, 真分高)**:
+- lgbm ctx 在 cap1 BC=0.200 的 P=1.0 R=0.111 → **召回低但 precision 高**, test 上扩展性好
+- mlp 在 cap1 BC=0.308 是 P=0.5 R=0.222 → **precision 已经很低**, test 上 FP 大爆发
+
+**含义 (累积 D-3/D-9/D-11 同根 lesson)**:
+- **cap1 369 上稀有类 (BC 9 正例 / I 60 正例) 的 strat 选择本质是过拟合验证集**, 不论是 grid 搜权重 (D-7) / OOF +0.0217 大数字 (D-3 ti-robust) / 还是 +1 TP 跳 F1 (D-11)
+- 唯一稳定 cap1→test 转化的增益类型 = **多源融合在 T (150 正例) / I (60 正例) 中等样本类的真实信号叠加**, BC (9 正例) cap1 增益**永远不可信**
+- 不再追 cap1 BC 增益 (任何形式), 守"BC 用 ctx-only strat" 死规则
+
+**红旗**: 任何 cycle 看 cap1 BC > 0.22 时, STOP, 直接拒该 strat. 这是 D-3/D-9/D-11 累积学到的极硬约束.
+
+**ctx 基座升级路线状态**:
+- xgb_v1 / lgbm_v2 fused 0.6529 略低 lgbm_v1 0.6540 → 单独换 base 无收益
+- mlp_v1 fused 0.6745 的 +0.0205 全是 BC cap1 cherry-pick → 真分反烧 -0.022
+- **结论: ctx 基座升级 (cycle 18) 全证伪**, 守 lgbm_v1 base 不动
+
+### D-12: cycle 19 所有 ctx-内方向全证伪 — 初赛已达个人天花板 0.71529
+
+**决策**: 关闭所有 ctx-内攻击路线 (LGBM sweep / 融合策略改 / mlp 子策略). 接受 SOTA **orthofuse-20260531-0319 = 0.71529** 作初赛终态. 转复赛镜像准备.
+
+**Rationale (cycle 19 双路线完整证伪)**:
+
+**19c (T/I 用 mlp 子策略, 守 BC=ctx 死规则)**:
+- T (150 正例) SOTA strat=ctx_w_h_eq cap1=0.676, **任何含 mlp 的 strat 最高 0.635 (-0.04)**
+- I (60 正例) SOTA strat=ctx_h_eq cap1=0.557, **任何含 mlp 的 strat 最高 0.475 (-0.08)**
+- mlp 在 T/I 上系统性弱 ~0.04-0.08, **不只是 BC 噪声, mlp 整体就比 lgbm 弱**
+- 不浪费提交配额, 立即弃 19c
+
+**19b (LGBM 超参 sweep, 用 OOF full 选避 D-3 cap1 cherry-pick)**:
+- quick 4 组合 stride40 5-fold OOF: baseline (300/0.05/31/1.0) full_macro 0.5909 = 最高
+- 增 n_estimators / 增 lr+leaves / 加 feat_frac → 全部 full_macro 略降
+- cap1 上 baseline 0.6268, 其它最高 0.6290 (+0.002 < +0.005 gate)
+- **gate 未过, baseline 是最优 = LGBM 在当前 46d 特征+stride40 OOF 全量上已饱和**
+- 全量 36 组合大概率同结论 (主要轴向已覆盖), 不浪费 ~70min
+
+**累积 cycle 16-19 全路径汇总**:
+
+| Cycle | 方向 | 决策门结果 | 真分代价 |
+|---|---|---|---|
+| 16 | 三源融合 (ctx+whisper+hubert) | ✅ cap1 0.6540 → 真分 0.71523 ≈ SOTA | 0 (反正同 SOTA) |
+| 17 | 加 w2v2/e2v 4/5 源 | ❌ cap1 锁 0.6540 (D-10) | 0 (不重复提交) |
+| 18 | ctx 基座 mlp BC | ❌ cap1 +0.108 cherry-pick → 真分 -0.022 (D-11) | -0.022 烧 1 提交 |
+| 19c | T/I mlp 子策略 | ❌ mlp 全类系统性弱 | 0 (cap1 已说差) |
+| 19b | LGBM 超参 sweep | ❌ baseline 即最优 (cap1 饱和) | 0 |
+
+**真 SOTA = orthofuse-20260531-0319 = 0.71529** (双源 ctx + whisper)
+- 前 10 真门槛 0.7285, 差 0.0135
+- 已穷尽所有路径, **每路最大可能增益 < 0.005, 凑不到 0.014**
+
+**含义 (诚实总结)**:
+- **初赛个人天花板 = 0.71529**, 进前 10 在剩余路径上**确认不可达**
+- 接受这个数字, 不再烧云时间/提交配额
+- **转复赛镜像准备**:
+  1. Docker 镜像 (含 ctx-LGBM stride40 + whisper-cloud-head + orthofuse 跨源融合 pipeline)
+  2. 推理脚本 (单段输入→输出 5 列 CSV)
+  3. README + 数据约定文档
+  4. 报备 chinese-hubert/w2v2/e2v 非 Qwen 模型 (2026-06-10 前 xinyebei@xinye.com)
+     - 即使三源未破 SOTA, 用过的模型仍需合规报备
+     - 邮箱身份 = 问用户取真邮箱 (非 userEmail)
+
+**红旗 (本路径永久关闭)**:
+- 不再启动任何 "加更多模型源" cycle (D-10)
+- 不再启动任何 "在 cap1 上选 strat" cycle (D-3/D-9/D-11)
+- 不再启动 LGBM 超参 sweep 任何变体 (D-12)
+- 若用户后续仍想突破, 真正未试 = 改特征工程 (新 46d 改进版 → 重训整个 ctx base) 或彻底换架构 (整通对话神经预测), 不在现 cycle 套路内

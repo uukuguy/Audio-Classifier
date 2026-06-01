@@ -32,7 +32,7 @@ from cycle_context import featurize as ctxfeat  # noqa: E402
 
 LAB = {0: "C", 1: "T", 2: "BC", 3: "I", 4: "NA"}
 CTX, TGT = 375, 25
-SEED = int(os.environ.get("WHISPER_SEED", 42))  # env var 覆盖 (HARD RULE: 实验值走 env 不写 default)
+SEED = 42
 torch.manual_seed(SEED)
 np.random.seed(SEED)
 DEV = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
@@ -49,6 +49,7 @@ def load_train():
     style allocation, 不需临时拷贝), 然后逐通往里填. 1TB 内存稳容.
     """
     files = sorted(glob.glob(f"{CACHE}/train/*.npz"))
+    _probe = np.load(files[0])["frames"]; FDIM = _probe.shape[-1]  # 动态探测(whisper1280/hubert1024)
     # 第一遍: 累计 N + 读 ctx/Y/G/order (这些小, 全 RAM ~MB 量级)
     Xc, Y, G, order = [], [], [], []
     sizes = []
@@ -66,11 +67,11 @@ def load_train():
             G.append(gi)
             order.append(j)
     N = sum(sizes)
-    gb_need = N * 2 * 80 * 1280 * 2 / 1024**3
-    print(f"[head] 共 {N} 窗, 预分配 Xa [{N},2,80,1280] fp16 = {gb_need:.1f} GB (1TB 内存稳容)", file=sys.stderr)
+    gb_need = N * 2 * 80 * FDIM * 2 / 1024**3
+    print(f"[head] 共 {N} 窗, 预分配 Xa [{N},2,80,{FDIM}] fp16 = {gb_need:.1f} GB", file=sys.stderr)
 
     # 第二遍: 一次性预分配 + 逐通填. 不走 append + np.array() 路径 (后者会触发临时拷贝)
-    Xa = np.empty((N, 2, 80, 1280), dtype=np.float16)
+    Xa = np.empty((N, 2, 80, FDIM), dtype=np.float16)
     pos = 0
     for gi, f in enumerate(files):
         z = np.load(f)

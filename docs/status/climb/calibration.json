@@ -102,6 +102,14 @@
       ],
       "last_updated": "2026-05-31T04:10:00",
       "_note": "n=1: grid加权融合(context内4成员)。local用nested诚实估计0.6198(非cap1虚高0.6655) → 线上0.679138 = -0.0333 vs SOTA。gap +0.0594接近context正常gap=线上低不是gap问题而是cap1本身过拟合(BC 0.364→nested 0.200蒸发)。★context内融合证伪: 4成员不正交,grid搜5^4权重在369样本上过拟合。融合正交性来自信号源不同(D-6)。"
+    },
+    "context-whisper-hubert-orthofuse": {
+      "n_samples": 0,
+      "mean_gap": null,
+      "std_gap": null,
+      "last_3_gaps": [],
+      "last_updated": null,
+      "_note": ""
     }
   }
 }

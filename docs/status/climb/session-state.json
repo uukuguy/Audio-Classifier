@@ -2,8 +2,20 @@
   "_schema_version": 1,
   "session_id": "2026-05-31-fusion-075",
   "phase": "模型融合冲0.75。context内融合nested证伪(不正交)。跨源context×whisper per-class正交融合成立(真分破SOTA)。下一步:whisper T/I增益叠变体F 5seed强基座",
-  "last_cycle": 14,
-  "in_flight": null,
+  "last_cycle": 19,
+  "in_flight": {
+    "task": "D-12 写入. cycle 16-19 全路径证伪. 初赛终态 = orthofuse-20260531-0319 真分 0.71529. 转复赛镜像准备",
+    "host": "本机",
+    "started_at": "2026-05-31T13:40",
+    "pids": null,
+    "cycle19_summary": {
+      "19c_t_i_mlp": "mlp 在 T/I cap1 上 -0.04~-0.08 系统性弱, 不只是 BC 噪声. 0 提交价值",
+      "19b_lgbm_sweep": "quick 4 组合 baseline OOF full=0.5909 = 最高, 其它 -0.002~-0.005, LGBM 在 46d+stride40 OOF 饱和"
+    },
+    "real_sota_final": "orthofuse-20260531-0319 = 0.71529 (双源 ctx + whisper, T=w70 / I=whisper)",
+    "decision_context": "全路径汇总 (cycle 16-19): ①加N源 ②ctx基座 ③T/I mlp ④LGBM sweep ⑤BC单类替换 全部证伪. 每路最大增益 <0.005, 凑不到 0.0135 缺口",
+    "next_action": "转复赛镜像准备: Docker + 推理 pipeline + README + 报备 chinese-hubert/w2v2/e2v (2026-06-10 前)"
+  },
   "last_result": {
     "cycle": "H-ORTHOFUSE (context×whisper 跨源融合)",
     "verdict": "★★★成立(真分铁证): 真分0.71529 破SOTA +0.002866 vs 变体F 0.712424. cap1 0.6228→0.6410(+0.0182). T借w70/I借whisper, whisper在T/I真实强(T0.656/I0.509). gap +0.0743",

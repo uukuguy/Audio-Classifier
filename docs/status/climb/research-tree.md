@@ -9,9 +9,18 @@
 
 - **phase**: 模型融合冲0.75。context内融合nested证伪(不正交)。跨源context×whisper per-class正交融合成立(真分破SOTA)。下一步:whisper T/I增益叠变体F 5seed强基座
 - **best online**: 0.71529
-- **last_cycle**: 14
+- **last_cycle**: 19
 - **next_hypothesis**: 【最高ROI】whisper T/I叠变体F 5seed强基座:当前orthofuse的context基座是lgbm_v1单模(cap1 0.6228),换成变体F 5seed(cap1 0.6402)做基座,T/I仍借whisper→把+0.0182叠到更高起点。前置:改gen_variants.py让变体F存cap1 OOF+test连续概率npz
-- **in-flight**: none
+
+**In-flight job** (resume MUST verify liveness):
+- task: D-12 写入. cycle 16-19 全路径证伪. 初赛终态 = orthofuse-20260531-0319 真分 0.71529. 转复赛镜像准备
+- host: 本机
+- started_at: 2026-05-31T13:40
+- pids: None
+- cycle19_summary: {'19c_t_i_mlp': 'mlp 在 T/I cap1 上 -0.04~-0.08 系统性弱, 不只是 BC 噪声. 0 提交价值', '19b_lgbm_sweep': 'quick 4 组合 baseline OOF full=0.5909 = 最高, 其它 -0.002~-0.005, LGBM 在 46d+stride40 OOF 饱和'}
+- real_sota_final: orthofuse-20260531-0319 = 0.71529 (双源 ctx + whisper, T=w70 / I=whisper)
+- decision_context: 全路径汇总 (cycle 16-19): ①加N源 ②ctx基座 ③T/I mlp ④LGBM sweep ⑤BC单类替换 全部证伪. 每路最大增益 <0.005, 凑不到 0.0135 缺口
+- next_action: 转复赛镜像准备: Docker + 推理 pipeline + README + 报备 chinese-hubert/w2v2/e2v (2026-06-10 前)
 
 **Next action on resume**: 改 tools/climb/gen_variants.py 存变体F cap1 OOF+test连续概率npz → cycle_orthofuse.py 用变体F基座+whisper T/I → nested验证 → 涨了生成提交件
 
@@ -31,6 +40,7 @@
 | ti-text-fusion | 0 | — | — | [—] |
 | context-whisper-orthofuse | 1 | 0.07 | — | [0.07] |
 | ensemble-grid | 1 | 0.06 | — | [0.06] |
+| context-whisper-hubert-orthofuse | 0 | — | — | [—] |
 
 ## Push ladder (chronological)
 

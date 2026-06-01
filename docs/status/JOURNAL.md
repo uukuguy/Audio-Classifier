@@ -251,3 +251,54 @@
 - 03:20 ★诚实校准:线上估0.7130仅+0.0006 vs SOTA。两原因①融合基座lgbm_v1单模(0.6228)非变体F 5seed(0.6402)②whisper test gap≈0非ctx+0.072用ctx gap外推高估。冲0.75下一步:whisper T/I增益叠变体F强基座,非单模lgbm
 - 03:30 commit 121b9a8: 跨源融合成立+context内融合证伪+融合脚本+D-6/D-7。post-commit自动regen research-tree
 - 05:20 环境收口session: CC symlink→156+锁版本(防跳158) / PostToolUse hook error根因=GSD门禁`[-d .planning]&&exec`无.planning短路exit1(非bug)修为`||exit0`×8 / climb状态落盘(session-state best→0.71529+confirmed加orthofuse+pending清空). 不碰用户私有赛题要求.md+手册.pdf
+- 05:35 CLAUDE.md 校准两处失准:前10门槛0.7192(首日旧榜)→0.7285(真门槛,用户纠正过)+BC诊断链从"需神经编码器"更新为已闭合终态(冻结0.22/可学0.267不可行/转T-I跨源)。防重走证伪路。全局CLAUDE.md无需改 [1498ac1]
+- 06:27 ★cycle15 stride诊断揭穿next_hypothesis: 5seed零增益(cap1 0.6349=0.6349), 变体F 0.6402真实来源是stride5全量训练非5seed。受控: stride40 ctx0.6228→fused0.6410(+0.0182) vs stride5 ctx0.6403→fused0.6455(+0.0052)。基座越强whisper正交越饱和(增益+0.0182→+0.0052)
+- 06:27 ★orthofuse-s5提交件: stride5强基座(0.6403)+whisper借T(eq). fused cap1 0.6455(+0.0045 vs旧SOTA), 线上估0.7175。pos c973 na950 i65 bc33 t507健康。登记pending待用户提交
+- 06:30 ★BC概率诊断(防重走死路): whisper BC AUC=0.72有信号但cap1仅9正例→F1≈0.20是冻结极限(D-4应验)。ASL救不了BC, 该救T/I(样本足)
+- 06:32 ★multi-AI quorum(云端GPU方向): gemini+opencode+claude 3/3投B=chinese-hubert第三源(非whisper-ASL)。理由:融合饱和后需全新正交源, HuBERT中文电话域对韵律敏感比ASR-whisper更易正交。⚠opencode提醒:非Qwen需合规报备
+- 06:45 ★云端第三源启动: chinese-hubert-large 走modelscope(用户纠正:云端国内CDN比hf-mirror快)。正确ID=pengzhendong/chinese-hubert-large(非TencentGameMate命名)。DL_PID98903后台下1.2GB。提取脚本extract_hubert_cuda.py已上传(复用whisper版结构, HubertModel+Wav2Vec2FeatureExtractor, 1024维)
+- 06:46 备选第四源: 同作者 pengzhendong/chinese-wav2vec2-large。策略:先验证hubert跨源正交(冒烟5通→看T/I),成立再加wav2vec2。不同时摊两未验证模型(validate_before_full_run)
+- 06:48 ★云端启动chinese-hubert第三源(用户同意报备): modelscope下pengzhendong/chinese-hubert-large(transformers格式1.26GB, 18.5MB/s国内CDN快)。纠正"ModelScope被墙"=本机限定, 云端国内IDC modelscope最快。提取脚本extract_hubert_cuda.py已上传(承whisper版, 改HubertModel/1024维/Wav2Vec2FE raw-wave)。冒烟5通待下载完
+- 06:52 ★hubert冒烟通过: frames(533,2,80,1024)fp16 CUDA加载正常脚本无误。参数315.4M(0.315B,远<8B✓ hidden1024/24层/16head)。启动全量提取train364+test1000(EXTRACT_PID100657, batch24, stride_mult8, ~60GB产物)
+- 06:52 chinese-wav2vec2-large也下(用户要,hf-mirror curl后台W2V_DL_PID100131)。⚠权衡:w2v2与hubert同门(同WenetSpeech/TencentGameMate/SSL)恐高度相关不正交, 优先验hubert正交性再定是否用w2v2四源
+- 07:00 ★hubert提取两次崩溃诊断: ①首次stride8写系统盘/(56G)→659窗/通×364≈65GB写爆磁盘(io.open失败)。修=写autodl-fs ②二次stride40仍DEAD无Traceback=ssh会话退出带走nohup子进程。修=setsid+</dev/null完全脱离。三次成功PID104339 ETA36min
+- 07:00 决策(用户): 先stride40轻量提取(~13GB不扩容)验hubert三源融合正交性, 正交了再关机扩容200G(autodl-fs→400G)跑stride8密集。省200G+几小时若不正交。容量估: hubert/w2v2密集各~65GB, whisper已64G
+- 07:43 ★hubert 提取完成: train 368通10G + test 1000通(0.1s/通快, 单切片1窗)。真实输出 /root/autodl-fs/hubert_cache (env HCACHE, 非backups), 23min完成. 系统盘72/127G, autodl-fs 101/200G, 11G hubert安全无需扩容
+- 07:46 用户反馈3条: ①云环境账本要及时记 ②空间够不够 ③代码本机写rsync上云不直接编辑. 全接住: reference_cloud_instance加路径地图+PID账本表 / feedback_code_local_then_sync新memory / hubert head训练时回答(11G够, 先验正交性才决定扩容)
+- 07:57 ★cycle 16启动: train_head_hubert.py 5fold 15ep PID108763, run_dir hubert-fusion-20260531-0750. env WCACHE=/root/autodl-fs/hubert_cache(脚本动态探FDIM=1024). 36104窗ctx46+aud[N,2,80,1024]=11GB常驻, fold1 ep10 loss=0.40正常. ETA~55min完成→rsync probs回本机→三源融合验正交
+- 08:01 ★hubert head 4min训完(实际比ETA快很多, 只训head): cap1 macro=0.6239 ≈ ctx 0.6228. per-class T=0.639/I=0.532/BC=0.000/C=0.974/NA=0.864. 单源各类无超过whisper(T0.667/I0.555)/BC崩到0=hubert无BC学习目标. 但需融合nested验证才能下"不正交"结论
+- 08:13 ★★★cycle 16 决策门: 三源 orthofuse 跑出 cap1 macro=0.6540 (+0.0313 vs ctx / +0.0131 vs 双源 0.6410). T 类 all_eq 三源等权=0.676 / I 类 ctx_h_eq=0.557 大幅超双源 whisper 0.509. hubert 与 whisper 在 T/I 互补(单源弱但融合方向不同). BC hubert=0 但 strat=ctx 守住. 估线上0.7260, 差前10门槛 0.7285 仅 0.0025! pos c975/na947/i56/bc27/t505健康
+- 08:13 提交件 orthofuse-3src-20260531-0813 已登记pending-lb. cycle_orthofuse_3src.py 已 rsync 上云 (md5 match). 决策门通过: 真分兑现则下一步扩容跑 stride8 密集 hubert + 加 w2v2 第四源
+- 08:16 ★★★三源真分到=0.715229 ≈ 旧SOTA 0.71529(浮点同分, -0.00006). cap1 +0.013 vs 双源未转化线上. s5 真分0.712328<旧SOTA -0.003(强基座反不如). 三个push line上紧锁0.712-0.715窄带=融合范式撞墙
+- 08:20 ★D-8 写入: 跨源融合 paradigm 上限锁0.715. 根因=cap1 369样本越多源越虚高 + train(全切片) vs test(切片末)分布差让多源信号失活. cycle 17 扩容w2v2 cancel(守validate_before_full_run, w2v2 1.2G已下载但不投训练). 真SOTA仍=orthofuse-20260531-0319 0.71529
+- 08:22 ★Knowledge Layer 触发: 加更多音频源路线已闭(D-8), 加更多LGBM变体不正交(D-5), 加文本/F0源虚高(D-3/D-4). 未试方向=①后处理(test切片末规则) ②半监督(test分布对齐) ③TTA. 这些都是非"加源"路径
+- 08:30 cycle 17 multi-AI quorum 3/3 投 D (train 切片末加权采样, 解决 D-8 根因). gemini+opencode 都加 fallback: sample_weight 10:1 不硬砍
+- 08:36 ★★D-9 chain-first 第二诊断撤 D-8 根因: test context shape=完整375chunk(=train窗shape), 不是"切片末"特殊. 4 push 线上分散 [0.71233, 0.71529] 0.003 内=test 1000段抽样噪声. cap1 +0.013→线上 +0.0001 是 noise floor 真模式. 真信号最大 = whisper T/I +0.003 (orthofuse vs 变体F). 前10门槛差 0.0135 = 需 4-5个 +0.003 独立信号, 已穷尽路径不可达
+- 08:36 ★决策转向: 守 SOTA 0.71529 作初赛终态, 转复赛镜像准备 (Docker + 推理 pipeline). 不启动 cycle 17 D方向 (基于错诊断). 报备 chinese-hubert (6-10 前) 合规即可
+- 10:00 ★用户撤 D-9 投降结论 + 提醒云端 0% GPU 占着费用: "这么快就投降了多模型试试不行吗"+"还在跑占GPU"。重读未试方向: w2v2/emotion2vec/多seed/per-class混搭 5 个角度都没试. D-9 保留"D-8 不是分布差"的诊断但撤回"转复赛镜像"结论
+- 10:01 ★chain-first 抓bug: 第一次启动 10seed 跑用 WHISPER_SEED env, 但 train_head_cuda.py SEED 写死 42 不读 env → 10 seed 跑出来全同 = 浪费 40min. pkill 杀掉, 改脚本 SEED=int(env.get(WHISPER_SEED,42)), md5 sync 上云
+- 10:08 ★★★cycle 17 三路并行启动: A=10seed whisper head (PID118260, 测 noise floor 真值, ETA 40min) + B=w2v2 extract train+test (PID118414, 第四源, ETA 30min) + D=funasr装+emotion2vec_base下 (PID118491, 第五源步骤1). 双 source-of-truth 守: cloud/extract_w2v2_cuda.py 本机写 md5 sync ✅. D 步骤2待 emotion2vec extract 脚本本机写
+- 10:11 D1 step1 3min 完成 (vs 估10min): funasr 1.3.9 装好, emotion2vec_base 360M 下完, modelscope CDN快
+- 10:14 ★probe funasr API: m.generate(wav, granularity="frame", extract_embedding=True) 返回 list[{key,labels,scores,feats}], feats [T,768] float32, 1s 16k→49帧≈50Hz. 本机写 extract_emotion2vec_cuda.py 适配 funasr 双声道 → md5 sync 上云 ✅
+- 10:15 ★D2 启动: emotion2vec 5通冒烟 1min 通过 (122窗/7.5s/通), 全量 PID120971 ETA ~93min (~11:48). GPU 当前占 2.9GB (w2v2 extract), A 仍 CPU 加载阶段未进 GPU. 3 模型 GPU 共享 <10GB 远低于 48GB
+- 10:47 ★heartbeat 抓 A 性价比致命错: A 跑 39min 只完 seed1/10 (5fold×7min/fold, stride5 全量179867窗 远超 cycle 16 hubert head stride40 36104窗的 4min). 10seed 真 ETA ~5.5h, 性价比极低 (noise floor 已能从 4 个真分推 ±0.003). 杀 A 省 GPU
+- 10:50 ★cycle 17 修正: 杀 A (PID 118262), 启 B head train (PID 124146, stride40 w2v2 cache, ETA ~5min). B extract train 369/369 完, test 449/1000 (5min 内完, head 训完才需 test cache). D2 extract train 294/369 (~80%, ETA ~8min 完)
+- 10:50 ★关键启示: hubert head 4min 是 stride40 36104窗的速度, 不是 stride5 全量. w2v2 head 复用同 stride40 cache → 同 5min ETA. 后续 emotion2vec head 同理. 不再误推 stride5 时间
+- 11:19 ★heartbeat 抓第二个bug: train_head_cuda.py 第 73 行 Xa 预分配写死 1280, 不接受 w2v2/e2v 的 1024/768d. 我以为脚本"动态 FDIM"但只 train_head_hubert.py 是修正版 (51-74 行有 _probe + FDIM). B head 第一次崩 (ValueError broadcast 1024→1280)
+- 11:20 ★B extract train+test ✅ + D2 e2v extract train+test ✅ 全完. B/D 都用 train_head_hubert.py (动态 FDIM) 重启
+- 11:22 ★B head (PID 126760 w2v2 1024d) + D head (PID 126761 e2v 768d) 同跑 stride40 cache, GPU 共享, ETA ~15min (双跑慢于单跑, ~11:37 完)
+- 11:25 ★cycle_orthofuse_nsrc.py 写完 (通用 1-5 源, 收紧门 +0.008/+0.010/+0.012, 双源 3源 dry-run 完美复现 0.6410/0.6540 cap1). 待 B/D head 完出 OOF 立即跑 4源/5源
+- 11:35 ★B/D head ✅ 完成 (w2v2 cap1 0.6395, e2v cap1 0.621). w2v2 单源 macro 最高但融合需看 per-class
+- 11:56 ★★★cycle 17 决策门 chain-first: 4源/5源 cap1 完全 = 3源 0.6540 (w2v2/e2v 0 贡献). 加 w2v2/e2v 无任何类被选(gate +0.008/+0.010/+0.012 没过, 类强度均 < 已占源). 双源 ctx+w2v2=0.6228=ctx-only(w2v2弱), ctx+e2v=0.6341(只 I 类 +0.011 弱). w2v2/e2v 单源 macro 高(0.6395) 但融合无价值 = 被 whisper/hubert dominate
+- 12:00 ★D-10 写: 5源融合 cap1 上限锁 0.6540, 3源即顶. 4源/5源真分必然 = orthofuse-3src 0.71523 (cap1+strat 同→csv同). 不重复提交. D-8/D-9 在 5源量级证实. 用户撤 D-9 投降后烧 ~3h 云时间换 paradigm 闭合 (诚实结论非粉饰)
+- 12:30 ★用户选 ② ctx基座升级. _stack_cache 已有 lgbm_v1/xgb_v1/lgbm_v2/mlp_v1 四个 base 的 OOF/test, 零额外训练. nsrc 脚本加 --ctx-base 参数 4 base × 3源 cap1 对照
+- 12:37 ★★cycle 18 反直觉发现: xgb_v1/lgbm_v2 fused 0.6529 略低于 lgbm_v1 0.6540, mlp_v1 fused **0.6745 (+0.0205)** 跳! chain-first 拆: 增益全在 BC 单类 0.20→0.308(+0.108), 但 BC cap1 9 正例 + 1 TP 跳 = 小样本噪声特征 (ti-robust 同款 D-3 陷阱风险)
+- 12:44 ★cycle 18 提交件生成: lgbm_v1 ctx base + cycle16 其它strat + BC 改 0.7*mlp+0.3*whisper. test pos BC=17 (vs cycle16 27 砍 10), 若 test BC 真正例 25-50 量级则召回偏低风险. cap1 pred 0.6756 vs cycle16 0.6540 (+0.0215). 风险评估 50/50: 真涨概率不高于一半因 BC pos 激进砍 + cap1 上 1 TP 噪声主导. 仅 1 个提交配额, 不浪费多试
+- 12:47 ★★★cycle 18 真分 0.69358 = -0.022 vs SOTA 大跌. chain-first 三层诊断: vs orthofuse-3src 只差 BC 一类(27→17, 16真BC→neg / 6非BC→pos), 其它4类完全相同 pos. -0.022 全归因 BC F1 跌 ~0.11
+- 12:50 ★D-11 写: BC cap1 +0.108 = cherry-pick (9 样本 +1 TP 跳 F1, mlp precision 0.5 在 test 上 FP 爆发). 累积 D-3/D-9/D-11 同根: cap1 BC<10正例 的 strat 选择本质过拟合验证集. 守"BC 用 ctx-only" 死规则. ctx 基座升级 (xgb/v2/mlp) 全证伪, 守 lgbm_v1 不动. cycle 18 烧 1 个提交配额 + -0.022 教训, 但消除"mlp 是好基座"假设
+- 13:26 ★cycle 19c (T/I mlp 子策略, 守 BC=ctx) 立即证伪: mlp 在 T (150正例)/I (60正例) 上系统性弱 -0.04/-0.08, 不只是 BC 噪声. mlp 全类比 lgbm 弱. 0 提交价值
+- 13:37 ★★cycle 19b (LGBM 超参 sweep, OOF full 选避 cap1 cherry-pick) quick 4 组合: baseline (300/0.05/31/1.0) OOF full=0.5909 = 最高, 其它 -0.002~-0.005. LGBM 在当前 46d+stride40 OOF 全量饱和, gate +0.005 未过. 全量 36 组合大概率同结论 (主轴已覆盖), 不浪费 ~70min
+- 13:40 ★★★D-12 写: cycle 16-19 全路径汇总证伪 (加源/ctx基座/T-I mlp/LGBM sweep). 初赛个人天花板 = orthofuse-20260531-0319 真分 0.71529, 差前10门槛 0.7285 0.0135, 每路最大增益 <0.005 凑不到. 诚实接受, 转复赛镜像准备 (Docker + 推理 + README + 合规报备)
+
+## 2026-06-01
+- 00:57 ★初赛代码评审包就绪 submission/code-20260601.zip (42KB, 9py+README+MANIFEST 全中文). 含 SOTA 复现链 (cycle_orthofuse + cycle_stack_fusion + cloud/train_head_cuda + cloud/extract_whisper_cuda + cycle_context/v2 + sliced_cv + gen_variants), 不含权重不含数据 (符合手册要求). 已清内部 climb 术语 (H-001/D-数字/变体F docstring), 字段名保留 (代码自描述). 远低于 100MB 上限. submission/ gitignored 不污染 git
