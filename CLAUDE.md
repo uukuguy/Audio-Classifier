@@ -85,7 +85,7 @@ cp tools/climb/hooks/post-commit .git/hooks/post-commit && chmod +x .git/hooks/p
 - 用公开数据/模型需 **2026-06-10 前**向 `xinyebei@xinye.com` 报备
 - **禁止**用公榜数据训练/标注/打伪标签
 - 增强数据 + 生成代码须随复赛镜像（CUDA Dockerfile）一并提交
-- 比赛报备/联系邮箱是对外身份 → **问用户**，不要用系统 userEmail
+- **参赛/对外联系邮箱**：`531045572@qq.com`（用户 2026-06-01 提供，仅用于赛方报备/复赛邮件/简历联系；**不**用作 git commit author，git author 永远走 `git config user.email`）
 
 ## 算力分工
 
