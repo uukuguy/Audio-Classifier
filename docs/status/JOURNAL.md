@@ -311,4 +311,8 @@
 - 09:45 B4 完成: gemini consult + 9 路 WebSearch + 2 篇论文. 锁 N1=DB-Loss+SupCon 校准头, N2/N3 备选. B2 整通对话取消 (16 天来不及). 报告 docs/status/2026-06-01-knowledge-layer-findings.md
 - 10:08 B3d (DB-Loss+SupCon 校准头 on [ctx_lgbm_v1, whisper] OOF) 跑完 5fold×3seed×30ep, 本机 MPS 6min: OOF macro 0.5701→0.6012 (+0.031 真训练增益)
 - 10:25 ★chain-first 救命 bug: 我用错的 cap1 定义(末窗 vs 真首窗 order=0) + 错的阈值 [0.5,0.5,0.5,0.5,0.05] (BC 真该 0.75). 用对后 B3d cap1=0.6240 < SOTA 0.6410. 若不修就 push BC pos 会 27→193 触 D-11. 救回 1 次提交配额
-- 10:30 **D-14 写入**: B3d OOF 涨真但 cap1=SOTA 持平→SKIP. 本质原因=校准头没新信号源, 只重校准 ctx+whisper 等于 SOTA orthofuse. 教训: DB-Loss/SupCon 必须叠新源(hubert/Omni/F0)才涨 cap1. B1 EDA 同步出 30+个 info>0.15 强 v3 特征(runlen/burst/trans/diff). 转 B1
+- 10:30 [7d16ce4] **D-14 写入**: B3d OOF 涨真但 cap1=SOTA 持平→SKIP. 本质原因=校准头没新信号源, 只重校准 ctx+whisper 等于 SOTA orthofuse. 教训: DB-Loss/SupCon 必须叠新源(hubert/Omni/F0)才涨 cap1. B1 EDA 同步出 30+个 info>0.15 强 v3 特征(runlen/burst/trans/diff). 转 B1
+- 10:43 用户云机系统盘扩容 200G ✅ (复赛 + N1' 云上工作准备)
+- 11:00 B1 v3 全量跑完 (stride5 140 万行, 5fold v1+v3 双跑 13min): OOF Δ=+0.0006, cap1 Δ=-0.004 → SKIP. **D-12 "46d 榨干"假设双重实证**. 47 个 EDA 强候选特征对 LGBM 几乎无 marginal contribution
+- 11:10 ★三轨本机攻坚全证伪 (B4/B3d/B1 v3 + 原 N1 想本机重训 whisper 不可行). D-13 攻击面剩 N1' = 云上 whisper head + DB-Loss+SupCon. cloud/train_head_n1.py 已写好待 rsync. 期望 cap1 0.65-0.66, 真分 +0.001~0.005
+- 11:21 用户 handoff 触发 — D-13 第一日 91min 完整收口 (0 提交配额损耗)

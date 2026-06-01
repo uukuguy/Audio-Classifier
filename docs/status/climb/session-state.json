@@ -4,11 +4,23 @@
   "phase": "D-13 激活前 20 攻坚战。SOTA 0.71529 = 排行榜第 37 名 (前 40 进复赛, buffer 3 名危险)。目标 0.7243 (前 20 门槛, 缺 +0.009)。三轨并行: B4 Knowledge Layer 今天 / B3 后处理 / B1 ctx v3 特征工程",
   "last_cycle": 19,
   "in_flight": {
-    "task": "B1 ctx 特征工程 v3: EDA 找到 30+ 个 info>0.15 强 v3 特征 (runlen/burst/trans/diff), 下一步把它们叠到现 46d, 重训 ctx_lgbm_v1, 验证 OOF macro 涨多少",
-    "host": "本机 MPS+CPU",
-    "started_at": "2026-06-01T10:30",
-    "next_action": "写 cycle_context_v3.py: featurize_v3 加 30 个强特征, 5fold OOF + cap1 评估, 涨过 SOTA cap1+0.005 才进下一步"
+    "task": "N1' (whisper/hubert head + DB-Loss + SupCon) 云上待启动. 本机攻坚 B4/B3d/B1 v3 + 原 N1 全证伪",
+    "host": "云上 AutoDL 4090 (关机中, 等用户决策开)",
+    "started_at": "2026-06-01T11:21 (handoff)",
+    "deadline": "ETA 启动后 20-30min GPU + 30min rsync/setup",
+    "next_action": "用户决策开云机 → rsync cloud/train_head_n1.py → 跑 5fold 15ep → probs.npz 拉回本机 → orthofuse 重做",
+    "code_ready": "cloud/train_head_n1.py 已写好, 派生 train_head_hubert.py, 替换 BCE 为 DB-Loss + α·SupCon",
+    "decision_gate": "单源 cap1 ≥ 0.6289 进 orthofuse, orthofuse 后 cap1 ≥ 0.6460 push",
+    "fallback": "若 cap1 <0.6289, SKIP; D-13 失效则回 D-12 接受 0.71529, 转复赛镜像准备"
   },
+  "completed_today_phase1": [
+    {"task": "B4 Knowledge Layer", "result": "找 N1/N2/N3, B2 取消", "report": "2026-06-01-knowledge-layer-findings.md"},
+    {"task": "B3d 校准头 ctx+whisper OOF", "result": "OOF +0.031 真训练增益但 cap1=SOTA. D-14 闭合: 校准头无新源不涨 cap1", "artifacts": "tools/runs/climb/b3d-calib-20260601-1008/"},
+    {"task": "Chain-first 救命 bug", "result": "B3d cap1 定义+阈值错 → 假涨 +0.041 实际 0. 救回 1 次提交配额"},
+    {"task": "B1 EDA v3 候选", "result": "47 候选 info>0.15 强特征", "artifacts": "docs/status/2026-06-01-b1-eda-v3-features.json"},
+    {"task": "B1 v3 ctx 重训", "result": "OOF Δ+0.0006, cap1 Δ-0.004 → SKIP. D-12 '46d 榨干' 实证", "artifacts": "tools/runs/climb/ctx-v3-20260601-1055/"},
+    {"task": "N1 原方案 chain-first 否决", "result": "本机重训 whisper head 不可行 (frames 在云端 64GB). 改 N1' 云上"}
+  ],
   "completed_today": [
     {
       "task": "B4 Knowledge Layer",
