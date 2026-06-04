@@ -490,3 +490,4 @@
 - 14:30 R4 截短公榜验证 csv 已生成: submission/truncated-validation-20260604/{R4_keep125_ctx10s,R4_keep63_ctx5s}/pred_test1.csv. pos 变化: NA 飙升 947→996→999 / C 急跌 975→920→794 / BC/I 砍半 / T 几乎不变. 1-2 个 push 即可实测 R4 真分退化
 - 14:30 推算 R4 全栈复赛真分: ctx 在 R4 中只占 C/BC/NA 列 + I 列 1/3, 实际 R4 退化 ≈ ctx 退化 × 0.5 → 测试集 2 (0,30]s 均匀分布估真分 0.72-0.74 (远好于事前估 0.60-0.70 范围)
 - 14:30 落盘答辩金料: docs/finals/charts/cross-context-degradation-20260604.md (T3 cross-context 表 + R4 退化推算 + 评委追问应答稿)
+- 15:30 主 commit R4 NEW SOTA + D-22~D-26 + T1/T3 工具 + finals 桶 + gitignore 例外 (finals-20260604/truncated-validation tracked) [5b75d55]
