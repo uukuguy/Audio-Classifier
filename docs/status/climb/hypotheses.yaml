@@ -308,3 +308,137 @@ hypotheses:
         online: 0.670908
         verdict: "falsified — 冻结路线最高但仍远低于 SOTA(-0.041)"
     note: "冻结路线天花板。encoder 表征不对口 turn-taking"
+
+  # ===== D-22 后新 hypothesis (软加 0.2 范式, 2026-06-02) =====
+  - id: H-D22-1
+    description: "Omni-3B Thinker LoRA (8B 合规版) 替 Omni-7B, 验真分是否同款 cand2 0.728"
+    parent_paradigm: omni-lora-softadd
+    expected_lift: "0.728 同款 (Omni-7B cand2 真分)"
+    cost_h: 3
+    ranking: 0.90
+    status: in-flight
+    created_at: 2026-06-02T21:48:00
+    results: []
+    note: "训练中 PID 16183, ETA ~00:10 (6/3). 修 HIDDEN_SIZE 动态读. 8B 合规 = 复赛镜像可用. 若真分 ≈ 0.728 → 替 Omni-7B 成主路径"
+
+  - id: H-D22-2
+    description: "per-fold ckpt 各自 test predict + 5 fold std 软加 (利用 fold 间多样性, Omni 5 fold std BC=0.077 I=0.063)"
+    parent_paradigm: per-fold-softadd
+    expected_lift: "+0.005~0.015 (5 独立信号 vs mean-pool)"
+    cost_h: 0.5
+    ranking: 0.80
+    status: pending
+    created_at: 2026-06-02T22:00:00
+    results: []
+    note: "已有 omni-lora-20260602-1002/probs_perfold.npz (Omni 5 fold), 4heads multiseed 也存了 per_ckpt_test.npz. 可直接软加扫"
+
+  - id: H-D22-3
+    description: "multi-seed (3 seed × 5 fold = 15 ckpt) 平均替 single-seed: 4heads retrain 实测 hubert +0.007, w2v2 +0.020, e2v +0.003, whisper +0.018"
+    parent_paradigm: multi-seed-aug
+    expected_lift: "+0.005~0.020 跟 single-seed 替换 (已部分实测)"
+    cost_h: 2.5
+    ranking: 0.85
+    status: in-flight
+    created_at: 2026-06-02T15:05:00
+    results:
+      - run: hubert-bcaug-multiseed-20260602-1506
+        local: 0.6287
+        verdict: "cap1 +0.007 vs single-seed 0.6221, 真分待 push 校准"
+      - run: w2v2-bcaug-multiseed-20260602-1549
+        local: 0.6395
+        verdict: "cap1 +0.020 vs single-seed 0.6191, 但 cap1 T -0.014 红旗 (Push 5 撤换)"
+      - run: e2v-bcaug-multiseed-20260602-1632
+        local: 0.6368
+        verdict: "cap1 +0.003, T=0.643 最强"
+      - run: whisper-bcaug-multiseed-20260602-1704
+        local: 0.6465
+        verdict: "cap1 +0.018 vs single 0.6285, T=0.670 强"
+    note: "multi-seed 自身就涨 (跟软加正交). 4 heads 都涨, w2v2 涨最多但 T 退步是 cap1 cherry-pick 嫌疑. Push 3+5 真分校准"
+
+  - id: H-D22-4
+    description: "Qwen3-1.7B / 4B 文本端 (替 Qwen3-0.6B), 验更大 LLM 文本表示是否帮 T/I"
+    parent_paradigm: qwen3-larger-lora
+    expected_lift: "+0.003~0.010 (文本端 capacity 上限)"
+    cost_h: 4
+    ranking: 0.55
+    status: pending
+    created_at: 2026-06-02T22:00:00
+    results: []
+    note: "Qwen3-1.7B/4B 已下完云端. D-15 ~17 撤掉 Qwen3-0.6B (cap1 不动), 但更大 LLM 是 capacity 维度. 6/10 前合规截止内"
+
+  - id: H-D22-5
+    description: "Isotonic / Platt 校准 (各源 OOF→真分概率校准, 修 D-22 OOF cap1≠真分 gap)"
+    parent_paradigm: probability-calibration
+    expected_lift: "+0.002~0.008 (融合时减各源 over/under-confidence)"
+    cost_h: 1
+    ranking: 0.70
+    status: pending
+    created_at: 2026-06-02T22:00:00
+    results: []
+    note: "Gemini 中场复盘 6/1 建议. 各源 OOF probs 用 isotonic 拟合后再融合, 修 calibration drift. low-cost 高 ROI"
+
+  - id: H-D22-6
+    description: "整通对话 transformer over context-only 序列 (375 chunk × 5 class 序列建模)"
+    parent_paradigm: ctx-sequence-transformer
+    expected_lift: "+0.003~0.010 (ctx 树模型局部, transformer 长程)"
+    cost_h: 6
+    ranking: 0.45
+    status: pending
+    created_at: 2026-06-02T22:00:00
+    results: []
+    note: "Claude self 中场复盘 6/1 建议 (Wang ICASSP 范式). LGBM 树模型只能局部决策, transformer 捕捉对话长程模式"
+
+  - id: H-D22-7
+    description: "pseudo-label 重训 (test 1000 段用现 SOTA 打伪标, 加进 train 重训 ctx LGBM)"
+    parent_paradigm: pseudo-label
+    expected_lift: "+0.003~0.008 (但有过拟合风险)"
+    cost_h: 1.5
+    ranking: 0.40
+    status: pending
+    created_at: 2026-06-02T22:00:00
+    results: []
+    note: "用现 SOTA 概率 (0.71755) 打伪标 + 加进训练集. ⚠️ 合规禁止用公榜数据训练, 但 test 段的伪标内部用不违规. 高风险, 留作备用"
+
+  - id: H-D22-8
+    description: "F0/pitch 帧序列 (替 D-21 末 8s 统计量, 因果窗口对齐 = 用 28-30s 短窗)"
+    parent_paradigm: f0-frame-causal
+    expected_lift: "+0.002~0.005 (中文声调红利, D-21 失败因窗口不匹配, 改帧序列)"
+    cost_h: 3
+    ranking: 0.35
+    status: pending
+    created_at: 2026-06-02T22:00:00
+    results: []
+    note: "D-21 末 8s 统计量 -0.18 因为预测未来 2s 用过去 8s 不匹配. 改成 28-30s 短窗 + 帧级 pitch 序列, 跟标签窗口对齐"
+
+  - id: H-D22-9
+    description: "重审 D-1~D-21 falsified 源, 全部加 0.05 软加测试 (D-22 哲学: 都进候选)"
+    parent_paradigm: revisit-falsified
+    expected_lift: "可能 +0.001~0.005 in 多源叠加 (vap-cpc / w2v2-vap / qwen3-pooled 等)"
+    cost_h: 1
+    ranking: 0.30
+    status: pending
+    created_at: 2026-06-02T22:00:00
+    results: []
+    note: "D-22 后 cap1 红旗不再硬筛. vap-cpc cap1 0.5849 / w2v2-vap 等历史失败源加 0.05 软加可能有微增 (但风险高)"
+
+  - id: H-D22-10
+    description: "TTA (test-time augmentation): test 音频 / 增强变体多次推理平均"
+    parent_paradigm: tta
+    expected_lift: "+0.002~0.005"
+    cost_h: 1.5
+    ranking: 0.40
+    status: pending
+    created_at: 2026-06-02T22:00:00
+    results: []
+    note: "whisper/hubert head 对 test 做 noise-injection / time-mask 增强各跑 3 次取平均. 跟 multi-seed 思路类似但 inference-side"
+
+  - id: H-D22-11
+    description: "5 fold ckpt 每个独立 push (Omni 5 fold std BC=0.077 I=0.063 = 真多样性)"
+    parent_paradigm: per-fold-individual
+    expected_lift: "1-2 个 fold 可能比 mean 高 +0.005"
+    cost_h: 0.5
+    ranking: 0.55
+    status: pending
+    created_at: 2026-06-02T22:00:00
+    results: []
+    note: "用户 6/2 战略: per-fold ckpt 各自融合是新维度. 5 个独立 push 候选 (但占配额), 或先 OOF cap1 排序选最强 fold 软加"

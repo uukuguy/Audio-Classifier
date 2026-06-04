@@ -1,0 +1,120 @@
+{
+  "_note": "面向复赛 8B 合规 + 跨切片稳的提交件包. 更新: R4 实测 NEW SOTA 0.7458, 已破前 3 (0.7460 估上挪). 5 候选全部真分到齐, 不要再 push 它们. 详 docs/status/2026-06-04-submission-strategy.md",
+  "_sota_base": "R4 = NSOTA_07 + e2v_ms 0.03 + hub_ms 0.03 真分 0.745798 (6/4 D-25 双 SSL_ms 协同效应)",
+  "candidates": [
+    {
+      "name": "R5_NEW_SOTA_NSOTA+wsp_ms_007",
+      "params_total_B": 1.5,
+      "real_score_known": 0.738899,
+      "pos": {
+        "c": 975,
+        "na": 947,
+        "i": 80,
+        "bc": 20,
+        "t": 523
+      },
+      "components": [
+        "ctx",
+        "wsp",
+        "hub",
+        "wsp_ms"
+      ],
+      "weights": "SOTA-3src + wsp_ms 0.07 on T/BC/I",
+      "stability_range": 0.0606,
+      "notes": "★ NEW SOTA 0.7389 已验, 8B 合规, 决赛主力",
+      "role_in_finals": "🟢 复赛主力 备份#2"
+    },
+    {
+      "name": "R1_NSOTA+e2v_ms_005_stable",
+      "params_total_B": 1.5,
+      "real_score_known": 0.733773,
+      "pos": {
+        "c": 975,
+        "na": 947,
+        "i": 81,
+        "bc": 17,
+        "t": 528
+      },
+      "components": [
+        "ctx",
+        "wsp",
+        "hub",
+        "wsp_ms",
+        "e2v_ms"
+      ],
+      "weights": "Q5 (NSOTA 0.05) + e2v_ms 0.05 on T/BC/I",
+      "stability_range": 0.058,
+      "notes": "★ 跨切片全场最稳 (range 0.058), 复赛镜像首选安全网",
+      "role_in_finals": "🟢 跨切片最稳 安全网"
+    },
+    {
+      "name": "R4_NSOTA+e2v_ms_003+hub_ms_003",
+      "params_total_B": 1.7,
+      "real_score_known": 0.745798,
+      "pos": {
+        "c": 975,
+        "na": 947,
+        "i": 81,
+        "bc": 15,
+        "t": 527
+      },
+      "components": [
+        "ctx",
+        "wsp",
+        "hub",
+        "wsp_ms",
+        "e2v_ms",
+        "hub_ms"
+      ],
+      "weights": "NEW SOTA + e2v_ms 0.03 + hub_ms 0.03 (双 SSL 低权微叠)",
+      "stability_range": "≈0.060",
+      "notes": "★ 全 SSL 双低权微叠 NEW SOTA, 上限破 0.739 + 跨切片稳",
+      "role_in_finals": "🏆 ★★ NEW SOTA / 复赛镜像首推"
+    },
+    {
+      "name": "R6_NSOTA+e2v_ms_003_ultralow",
+      "params_total_B": 1.5,
+      "real_score_known": 0.737403,
+      "pos": {
+        "c": 975,
+        "na": 947,
+        "i": 78,
+        "bc": 17,
+        "t": 524
+      },
+      "components": [
+        "ctx",
+        "wsp",
+        "hub",
+        "wsp_ms",
+        "e2v_ms"
+      ],
+      "weights": "NEW SOTA + e2v_ms 0.03 on T/BC/I",
+      "stability_range": 0.058,
+      "notes": "★ 极低权 e2v_ms 软加 NEW SOTA, 验 0.03 是否仍提分",
+      "role_in_finals": "🟡 R4 同源对照"
+    },
+    {
+      "name": "R3_SOTA+wsb_010_no_wsp_ms",
+      "params_total_B": 1.5,
+      "real_score_known": 0.736212,
+      "pos": {
+        "c": 975,
+        "na": 947,
+        "i": 80,
+        "bc": 18,
+        "t": 524
+      },
+      "components": [
+        "ctx",
+        "wsp",
+        "hub",
+        "wsb (single-seed)"
+      ],
+      "weights": "SOTA-3src + wsb 0.10 on T/BC/I",
+      "stability_range": 0.0606,
+      "notes": "0 wsp_ms / 0 Omni / 全 SSL 对照, 复赛极端友好版",
+      "role_in_finals": "🟡 0 wsp_ms 极端友好版"
+    }
+  ]
+}

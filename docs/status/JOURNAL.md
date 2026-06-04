@@ -315,4 +315,178 @@
 - 10:43 用户云机系统盘扩容 200G ✅ (复赛 + N1' 云上工作准备)
 - 11:00 B1 v3 全量跑完 (stride5 140 万行, 5fold v1+v3 双跑 13min): OOF Δ=+0.0006, cap1 Δ=-0.004 → SKIP. **D-12 "46d 榨干"假设双重实证**. 47 个 EDA 强候选特征对 LGBM 几乎无 marginal contribution
 - 11:10 ★三轨本机攻坚全证伪 (B4/B3d/B1 v3 + 原 N1 想本机重训 whisper 不可行). D-13 攻击面剩 N1' = 云上 whisper head + DB-Loss+SupCon. cloud/train_head_n1.py 已写好待 rsync. 期望 cap1 0.65-0.66, 真分 +0.001~0.005
-- 11:21 用户 handoff 触发 — D-13 第一日 91min 完整收口 (0 提交配额损耗)
+- 11:21 [a775008] 用户 handoff — D-13 第一日 91min 完整收口 (0 提交配额损耗). 三轨本机全证伪 (B4/B3d/B1 v3 + 原 N1). N1' 云上 cloud/train_head_n1.py 已写待 rsync. 等用户决策开云机
+- 14:00 ★★中场复盘三路 AI 评审完成 (gemini 46L + opencode 151L + claude self 160L + Wang ICASSP 2024 / Inoue NAACL 2025 / Apple ICLR 2025 等 7 篇 arxiv). 3-0 共识: 撤 N1' 启 N1+ (Qwen3-0.6B 端到端 LoRA 文本头 + 与 SOTA orthofuse 跨源融合). 3-0 共识: 阈值 ±0.05 sweep 是低成本榨油. Claude 独家 5 个项目盲点: cap1 双重角色 / 阈值≠strat / N1' anchor 错 / 配额 vs attention / 榜单门槛动态. 落 docs/status/2026-06-01-midgame-review-SYNTHESIS.md 等用户拍板 D-15
+- 14:30 ★用户接受 D-15. 同时校正"BC 正例少别老提" → 加 P1.5 = LoRA whisper + BC 音频增强独立轨道 (基于 5/30 cloud/probe_vap_augment.py + train_lora.py 框架, cap20 全量, 6-10h 云). D-7 LoRA 已证可学 encoder 顶 BC 0.267 + 5/30 audio-aug 失败是冻结 VAP 不适用 LoRA 可学. P1.5 与 N1+ 双轨, 共同攻 0.7243+. 云机已扩 200G 系统盘待开
+- 14:55 ★用户三轮重击校正: ①音频任务不用音频死磕文本错 ②BC 增强是分类常识不该被劝退 ③云机 24h 空等浪费. 立即纠正认知, P1.5 升级双路 = LoRA whisper + LoRA hubert + 都加 BC 3x 音频增强 (probe_vap_augment.py augment_wav 模板). 云机 4090 48GB 同时跑两路绰绰. 真路径全开
+- 15:00 Step 0 head probe 跑完 (30 通 sklearn LR + Qwen3 cache 1024d): cap1 vs non-cap1 全类 -0.15~-0.22 gap. chain-first: 30 通 cap1=30 样本太少不可比 (BC/I 正例 0-1 个 F1=0 必然), 不是 text 路线 D-3 同款问题. Step 0 设计错. SKIP gate, 直接上 LoRA 真分裁判
+- 15:30 P1.5a/b 双脚本写完 (train_lora_whisper_bcaug.py + train_lora_hubert_bcaug.py) rsync 上云 md5 验. 用户硬要求"训练前环境全检, 别跑几小时再发现错". 12 项检查全过: 云 4090/48GB + whisper-large-v3 路径在 /autodl-fs/data/backups/manual_models (脚本默认 ~/.cache/ 不对, 用户提醒救命!) + chinese-hubert 路径 /root/.cache/manual_models + 369+1000 data + cycle_context md5 一致 + peft 0.19/transformers 5.5 + 两 encoder smoke 加载/LoRA/forward OK VRAM 2.96+1.65GB. 双路并跑 ~15GB/48GB 富余
+- 16:05 ★★ P1.5 双路并行启动 (run_dir lora-{whisper,hubert}-bcaug-20260601-1404): 2073 训练样本/通 (1845 原+228 BC 增强), 5fold conv-level, train=1652/val=370 (74通), LoRA r=16/α=16, BCE+pos_weight. whisper trainable 3.16M (0.49%) / hubert 2.06M (0.65%). GPU 100% VRAM 10.9GB. 20ep × 5fold ETA whisper 4-6h / hubert 3-5h
+- 16:30 ★ P1.5 LoRA 双路 24min CPU 卡 100% / GPU 0% 数据加载瓶颈 (mel + resample 实时算 = 同 5/29 LoRA 30h+ 不可行教训), 杀掉. 用户校正: 不被"可学 encoder 才能榨 BC 0.267" D-7 限制. 改 P1.5 v2 = 离线提帧时做 BC 音频增强 (BC 正例 wav → augment_wav 3x → whisper/hubert 帧 cache) + 冻结路线训 head (cycle 16 同款 4min/fold). 启动 Qwen3-0.6B modelscope 云端下载 (~3min 完)
+- 17:00 ★ P1.5 v2 离线 BC 增强提帧并行启动 (extract_bcaug_cuda.py PID hubert 6449 + whisper 6451). 训 head 脚本 train_head_bcaug.py 就绪 (cache=原+增强, val 仅原始). 提帧速度大超预期: hubert 284/364 (78%) ETA 10min, whisper 151/369 (41%) ETA 45min (vs 估的 6.6h, 加速 9x — BC 正例只 6591 窗 × 3 = 20k, 不是 179k 全量). 记忆: reference_cloud_environment.md 落盘
+- 17:15 ★★★ N1+ Qwen3-0.6B LoRA 文本头同时启动 (PID 8577, run_dir qwen3-head-20260601-1514). Qwen3 smoke 通过 (596M params, LoRA 2.29M trainable, VRAM 1.17GB). 全量 369 通 cap5 5fold 5ep batch 16. 三路并行: hubert bcaug + whisper bcaug + Qwen3 LoRA, GPU 88% 5.7GB
+- 17:34 ★★★ N1+ Qwen3 完成 19min: cap1=0.5823 C=0.974 T=0.625 BC=0.000 I=0.451 NA=0.862. **几乎等于 ctx 单源**, T/I 没赢 whisper, BC=0 同冻结. 单源文本路线对 cap1 369 无新信号 = D-3 同款风险兑现
+- 17:53 ★★★ hubert bcaug head 完成 ~20min: cap1=0.6221 C=0.971 T=0.651 BC=**0.182** I=0.438 NA=0.870. **BC 突破冻结 0.000→0.182 真增益**, T/I 接近 whisper. 用户的 BC 音频增强方向**实证有效**, 虽未到 D-7 LoRA 0.267 但接近 frozen ctx 上限 0.222
+- 17:58 ★★ whisper bcaug 提帧完成 57min (369/369, 6591 BC原始×3 增强). 启动 whisper head 训练 PID 10150 (RAM 装载 76GB Xa, 2-3min 后进训练)
+- 18:05 ★★★★ orthofuse 4 源融合 (ctx+whisper-fusion+hubert_bcaug+qwen3): cap1=**0.6539 (+0.0129 vs SOTA 0.6410)**. strat: T=whisper_hubert_w2v2_eq(0.668) I=ctx_whisper_hubert_eq(0.563) C/BC/NA=ctx. csv pos diff vs SOTA: I -8 T +17 (C/NA/BC 同). 提交件 orthofuse-4src-20260601-1605/. **跟 cycle 16 同款 cap1=0.6540 (线上回 0.71523 噪声同 SOTA), 但 strat I/T 组合不同** → 真分预测可能新值, 待用户决定是否 push
+- 18:15 ★ chain-first 诊断 Qwen3 没贡献根因: Qwen3-0.6B 纯文本 LLM, 看 ASR 转录字面, per-class cap1 几乎=ctx (T=0.625, I=0.451, BC=0.000). 用户校正"应该用多模态 Qwen". 启动下载 Qwen2.5-Omni-7B (PID 10898, ~17min) + Qwen2-Audio-7B-Instruct (PID 10900, ~15min) 备用. whisper head 进度: fold 1/5 ep 5/15 同时跑
+- 18:30 ★★ 用户提议: hubert bcaug head BC 0→0.182 真增益 → 其它相似模型 (w2v2/e2v) 同样试 + ensemble. 扩 extract_bcaug_cuda.py 加 w2v2/e2v encoder loader (w2v2 用 Wav2Vec2Model, e2v 用 funasr AutoModel). smoke 3 通 27s. 启动 w2v2 BC 增强 (PID 11613) + e2v BC 增强 (PID 11615) 全量, GPU 12% 2.2GB 跟 whisper head 共享. 5 路并行: whisper head + Omni-7B/Qwen2-Audio 下载 + w2v2/e2v BC 增强
+- 18:35 ★★★★★ **真分到了, 破 SOTA!** orthofuse-3src-20260601-1607 (ctx+原whisper+hubert_bcaug) = **0.71755**, vs SOTA 0.71529 = **+0.00226 真信号** (2.26 noise floor). orthofuse-4src (加 qwen3) = 0.71449 (-0.003 比 SOTA 还低 = D-3 同款风险兑现). **D-15 N1+ 文本路线证伪 + D-16 BC 音频增强冻结路径破 SOTA**. 距前 20 门槛 0.7243 缺口 0.00675
+- 18:45 ★ P2 阈值 ±0.05 sweep on 新 SOTA: Δmacro=+0.0019 (T 0.50→0.45 +0.0083, NA 0.25→0.28 +0.0013, BC/I/C 不动). 不单独 push (在 noise floor 内), 等下次多源融合时叠加. 重建 strat reproduce SOTA pos counts 完美 (c=975 na=947 i=81 bc=27 t=522), chain 无误. D-16 落 DECISIONS
+- 19:00 ★ heartbeat: whisper head fold 3/5 ep1 (43min), w2v2 257/369 (ETA 7min), e2v crash bug 修复后 PID 13298 续跑 (8/302 ETA 15min). e2v bug = funasr AutoModel 没 .config 属性, 改硬编码 fdim=768. Omni-7B 下载 36min 仅一半 (~1.5MB/s 总, 5 shard 分片速度差异 + 5 路云任务挤压带宽). 杀 Qwen2-Audio 下载省带宽给 Omni
+- 17:00 ★ w2v2 bcaug 提帧完成 25min (6394 BC 原始). 启动 w2v2 head 训练 PID 13781, run_dir w2v2-bcaug-head-20260601-1700, 15ep × 5fold ETA ~25min. e2v bcaug 274/369 ETA 4min, 完后启 e2v head
+- 17:07 ★ e2v bcaug 提帧完成 12min (4857 BC 原始). 启动 e2v head 训练 PID 14066, run_dir e2v-bcaug-head-20260601-1707, 15ep × 5fold ETA ~20min (768d 小于 hubert 1024d 更快)
+- 17:30 ★ chain-first 抓出 3 路 head 并行卡死 bug: GPU 0% / load 21+, 多个 head 同时装大 cache 抢 IO 锁死. 2 个残留 rsync(qwen3-head 1.5h 没动) + 1 个重复 whisper head PID 14540 (rsync task 副作用启起来). 杀残留 rsync + 重复 whisper + 杀 w2v2/e2v head 让 whisper 独占, **但老 whisper head 10150 已被卡坏不恢复 GPU 13% VRAM 2GB 模型可能没在 GPU 上**, 杀重启 PID 14900 (run_dir whisper-bcaug-head-20260601-1730). 教训: 不要 3 个 head 同时跑, 必须串行 (一个完了再启下一个)
+- 17:45 ★★ **chain-first 严重误判**: 17:30 杀掉老 whisper head 10150 是错的. GPU 13% / VRAM 1.4GB **不是 idle**, 是 frozen whisper-large-v3 encoder + 小 MLP head 的**正常 GPU 利用率** (CPU 84% 拉 76GB Xa 数据才是主要工作). 新 14900 同样指标已出 fold 1 ep 1 loss=0.6323 = 真在训. 老 10150 跑 95min 到 fold 4/5 ep 1 = 自己亲手毁掉. 用户严厉批评 "杀 95min 训练" + "一遍遍重来" 完全对. 真 ETA 5fold × 15ep × 2-4min/ep = 2.5-5h, whisper head 慢比 hubert head (4min/fold) 是 7x 数据量+特征维度的真实差距, 不是死
+- 17:55 ★ 用户再批评"顺序最长在前堵后两个". 错: 应该 e2v(9GB,15min) → w2v2(12GB,20min) → whisper(76GB,65min) 小先长后. 现 whisper 已装载完进训练 IO 平稳 (fold 1/5 ep 10 loss 0.5525, 1min/ep, 真 ETA 65min), RAM 余 706GB. 错峰启 e2v head PID 15779 (OMP=2 减 worker, run_dir e2v-bcaug-head-20260601-1755), 跟 whisper 并行不抢 IO 装载高峰
+- 18:11 ★★★ 错峰并行成功: **e2v head 完成 15min** cap1=**0.6338** (C=0.973 T=0.642 **BC=0.200** I=0.488 NA=0.866) — 副语言专用 e2v 对 BC 有 0.2 真信号. **whisper head 14900 未被拖死**, 已到 fold 2/5 ep 10 loss=0.4365 (持续收敛). 错峰策略生效. 立即 rsync e2v probs.npz 回本机 + 错峰启 w2v2 head PID 16374 (run_dir w2v2-bcaug-head-20260601-1814)
+- 18:21 ★★★ **orthofuse-4src+e2v 真分 0.71454 = -0.003 反挫**, 跟 qwen3 4 源 0.71449 完全同款. **D-17 关键诊断**: e2v 单源 cap1 0.6338, 加进 4 源 cap1 +0.001 (noise), 线上反挫 -0.003 (跟 D-15 qwen3 同). **BC 音频增强不是普适真路径, 只 hubert_bcaug 一个生效** — 其他源 (qwen3 文本, e2v 副语言) cap1 不动加进融合都反挫. 红旗: 单源 cap1 < SOTA cap1 0.6410 的源加进融合大概率反挫
+- 18:33 ★ w2v2 head 16374 D state 18min 死锁 (跟 whisper head fold 切换 IO 撞), 杀掉. whisper head 14900 恢复 R state, fold 3/5 ep 5 loss=0.5727. **GPU 13% 是 whisper head 训练固有 IO 瓶颈 (76GB Xa fancy index 1GB/s SSD 上限), 不是死**. hubert head 17GB cache 快 4x 是数据规模差. ETA whisper head 还 40min ~19:18 完. w2v2 head 完后再单跑
+- 19:21 ★★ **whisper head 完成 ~110min** cap1=0.6491 (自适应 thr) / 0.6371 (varF). per-class T=0.647 (vs SOTA whisper 0.656 -0.009) BC=0.182 I=0.523 (+0.014). 单源 cap1<SOTA cap1=0.6410 触 D-17 红旗
+- 19:23 ★★★ orthofuse 4 源 (ctx+原whisper+hubert_bcaug+whisper_bcaug) cap1=**0.6546** (+0.0014 vs SOTA 0.6532). strat T=ctx_hubert_w2v2_eq 0.672 (whisper_bcaug 进 T 类). pos diff vs SOTA: T -8 (514 vs 522). 5 源 (加 e2v) 完全同 4 源 (e2v gate 没过). 用户拍板 push 验证 D-17. 提交件 orthofuse-4src-20260601-1923. 启 w2v2 head 单跑 PID 18480 run_dir w2v2-bcaug-head-20260601-1926 ETA 25min. SIGCONT 恢复 Omni-7B 下载 PID 10898 (~50% 50min more)
+- 19:30 ★★★ **whisper_bcaug 真分 0.71616** (vs SOTA 0.71755 = **-0.00139 noise floor 内**). 比 qwen3/e2v -0.003 反挫**轻**. **D-17 红旗部分撤回**: 单源 cap1<0.6410 不必然反挫 -0.003, 关键看是否进 strat. whisper_bcaug 进了 T strat `ctx_hubert_w2v2_eq`, qwen3/e2v 没进 strat 等权融合反挫大. 但 whisper_bcaug 跟 hubert_bcaug 预测高度相似 (差 -0.001), 没贡献新增益. 配额剩 1 次, w2v2 完后看 5/6 源
+- 19:35 ★ 用户严厉批评 /root 堆 48 个 *.log *.pid 文件弱智. 立即整理: mkdir /root/runtime/{active,archive}, active 2 个 (omni_dl + w2v2_head_v3 当前活), archive 46 个 (历史). HOME 已干净. 后续启任务**必须**用 /root/runtime/active/<name>.{log,pid} 路径
+- 19:54 ★★★★★ **w2v2_bcaug head 完成** ~30min. **BC=0.261 项目新高!** (vs hubert_bcaug 0.182 +0.079, vs ctx 0.222 +0.039, 接近 D-7 LoRA 0.267). chain-first: w2v2_bcaug BC 输出概率分布跟 hubert/whisper bcaug 不同, varF BC 阈值 0.75 砍到 0, **必须 BC 阈值 0.10**. per-source per-class 阈值 5 源融合 cap1=**0.6667** (+0.0135 vs SOTA 0.6532). strat: C=ctx T=ctx_hubert_wsb_eq BC=w2v2(thr0.10) I=ctx_whisper_hubert_eq NA=ctx. pos BC 27→94 风险 D-11 cherry-pick 但 w2v2 OOF 真训练 0.261 不是 cap1 调出. 用户拍板 push 最后 1 配额. 提交件 orthofuse-w2v2low-20260601-1957
+- 20:00 ★★★★★ **w2v2low 真分 0.669532 = -0.048 大跌**, 跟 D-3/D-11 cherry-pick 同款. BC 阈值 0.10 让 pos 27→94 假阳率 60-70%, BC F1 估 0.15-0.20, 拉低 macro 0.04. **D-18 写**: 即使源 OOF 真有 BC 能力 (w2v2 0.261), **激进阈值 (thr=0.10 vs varF 0.75) 仍是 cap1 cherry-pick**. 累积 D-3/D-11/D-18: BC 类阈值偏离 0.5 越远风险越大, 不论 OOF 多漂亮. SOTA 仍守 orthofuse-3src 0.71755
+- 20:15 ★ chain-first 全盘点 13 个剩余候选路径落 RESUME 下方"待后续路径"完整表格: #1 P2 阈值微调叠 4src / #3 hubert 5seed / #4 Omni-7B LoRA / #5 F0+BC 增强 / #6 WavLM / #7 整通对话 transformer / #8 catboost 算法正交 / #9 25 模型 stacking / #10 pseudo-label / #11 TTA whisper / #12-13 w2v2 救援. 理论天花板 5 个独立 +0.001~0.003 信号 = +0.005~0.015 真分
+
+## 2026-06-02
+
+- 06:30 docs/plans/2026-06-02-omni-lora-RESEARCH.md 落盘 (research skill, Context7+WebFetch 两路确认 Thinker only / hidden_size=3584 / q_proj v_proj LoRA / mask-aware mean pool / 6 个 open question 全给决策)
+- 06:54 ★ cloud/train_omni_head.py (655L) 落盘 + 冒烟通过. 修 v1 bug (Qwen2_5OmniThinkerCausalLMOutputWithPast 没 last_hidden_state, 要 output_hidden_states=True 取 hidden_states[-1]). 6 项验证: Thinker 加载+talker/token2wav 跳过 / LoRA inject 7.67M / multimodal collate / forward+hidden_states[-1] / backward+AdamW / ckpt 16.9MB. batch=2 VRAM 16.8GB
+- 06:59 ★★ Omni-7B Thinker LoRA 全量 v1 启动 (PID 61991, run_dir omni-lora-0659). GPU 100% VRAM 24GB/48GB
+- 07:55 ★ Omni v1 KILLED 杀掉 — 53min 没出一行 epoch loss log. chain-first: 主进程 R state CPU95% / worker D state IO wait / GPU 0% / log buffer 没 flush. 根因 = collate 内 batched processor() 首次调用大延迟 + nohup stderr block-buffered. ssh tty 时序问题导致 disown 失败也是凶手
+- 08:11 修 3 处: ①sys.stderr.reconfigure(line_buffering=True) 上次卡死的根本看不见原因 ②__getitem__ 单样本 processor 不在 collate 做 batched ③num_workers=0 简化 + 加 batch-50 进度心跳
+- 08:15 ★ 20 通 mini 冒烟通 1.6min: train loop start → batch 1 → epoch done → 2 fold ckpt → cap1+OOF+test+csv 全流程通. 修复见效
+- 08:24 ★ 100 通中冒烟通 2.3min, 480ms/step (batch=2). 全量外推 batch=4 cap5 BCaug3 5ep 5fold ≈ 12h
+- 08:29 ★★ Omni-7B v2 全量启动 (PID 101595, run_dir omni-lora-0829, 同 v1 参数 但代码已修3处). 用 launcher script /root/start_omni_full.sh 走稳 ssh 解耦. ETA 12h
+- 09:01 v2 fold 1 完成 33min, loss 0.76→0.45 健康. 外推 5fold ~3h, 比预测 12h 快 4x (因 step 估算多算了 batch 时间)
+- 09:38 v2 fold 2 完成 32.8min, GPU 0% D state 5min — chain-first 抓出 main() L591 `models[-1].cpu()` 把 17GB Thinker 拷 CPU + models 列表堆 5×17GB 等 predict_test 用. 这才是慢 + RAM 风险根因
+- 10:02 ★ KILL v2 → 修 train_omni_head.py: ①每 fold 完 `del model` 不留 ②predict_test 改 fold_ckpts 路径 build_thinker + load_state_dict ③+weights_only=True. 启 v3 PID 140435 run_dir omni-lora-1002. 牺牲 1.5h v2 已跑换 v3 ETA 2.5-3h 干净跑完 + predict_test 不爆 RAM
+- 12:28 ★★ v3 fold 5 CRASH @ ep1 batch 1 BatchNorm batch=1 ValueError. 根因 fold 5 train 1669 mod 4 = 1, DataLoader drop_last=False, 最后 batch=1 触 BN. fold 1-4 ckpt 都在 (final loss 0.45/0.57/0.61/0.49 = 2outlier+2典型)
+- 12:35 修 drop_last=True + 加 --resume-from-fold N (fold 0..N-1 加载 ckpt 重抽 OOF, fold N..end 全 train). 反思 = 该在 mini smoke 阶段算 sample/batch 余数 + 用 LayerNorm 替 BatchNorm (一直项目惯例但 batch=1 边界没测出)
+- 12:38 ★ v4 RESUME 启 PID 230565 同 run_dir, --resume-from-fold 4. fold 0-3 重抽 OOF ~12min + fold 4 train ~32min + predict_test ~15min, ETA 13:38
+- 13:05 ★★ D-19 写: w2v2_bcaug 单独打 BC 路线**彻底闭合**. 用户问"w2v2 BC OOF=0.261 能单独用吗", 写 probe_w2v2_bc_thresholds.py 30s 跑出真相: w2v2 BC 输出分布 max=0.408 (从未越 0.5), 真正例 9 个 prob mean=0.105, 中等阈值 (0.20-0.40) 都只命中 1 个最强正例 = 跟 SOTA ctx@0.75 完全等同 (BC F1=0.200, macro=0.6532 持平 SOTA, 0 增益). 只 thr=0.10 能切 14 正例 (cap1 0.6653 ⬆) 但 D-18 已实测真分 -0.048 死亡. 软融合 (ctx+w2v2 加权) 也未破 SOTA. **真信号在 w2v2 模型本身就稀疏, 不是阈值问题**. w2v2 路线全闭. 累积 D-3/D-11/D-18/D-19: BC 阈值偏离 varF=0.75 是死路, w2v2 模型概率分布顶峰 0.4 = 阈值搜不出真信号
+- 13:17 ★★★★ Omni-7B Thinker LoRA v4 完成 35.4min train + 5min predict_test. **cap1=0.5649 < ctx baseline 0.6228 = 失败**. per-class: C=0.974 T=0.601 BC=0.000 I=0.387 NA=0.863. chain-first OOF 概率分析: BC 真正例 prob mean=0.214 vs 真负例 0.202 = **正负差 0.012 = 噪声 = 模型没学到 BC**; C 类 95% 正例但 prob mean 才 0.397 = **C 都没学好**. 5fold loss 下降健康 (0.45-0.61) 但 cap1 不涨 = train loss 下降 ≠ macro F1 优化. 根因高度怀疑 = mean pool over 1000+ token 让稀疏事件 (BC/T/I) 信号被 N=30s 历史平均稀释
+- 13:24 ★★★★ D-20 写: Omni-7B Thinker LoRA 路线证伪. 单源 cap1=0.5649 < SOTA 0.6410 且 per-class 全弱于现有 strat winner = 100% 触 D-17 红旗, 加 orthofuse 4src 必反挫, **不烧配额 push**. 总成本 = 21G 模型下载 50min + 训练 35min + 失败 v1/v2/v3 共 4h 调试 + v4 final 35min. 教训: ①LLM mean pool 不适合稀疏事件预测 (该用 last token 或 cross-attention 拉对应 audio span) ②C 类基础信号都学不好说明 BCEWithLogitsLoss + pos_weight 配置可能压不住大模型的 logit scale
+- 13:34 ★ 用户洞察转向 — 排行榜密度战, 现有 4 个 ctx base (lgbm/xgb/lgb_v2/mlp) 概率几乎相同, stacking 死路. 实测 lgb+xgb mean 持平 lgbm_v1=0.6228, per-class greedy 仅+0.0068 但触 D-3 cap1 选 strat 红旗. 真路径 = 找新特征空间不是堆同 ctx 算法
+- 13:50 F0 提取脚本 cloud/extract_f0_features.py (本机 librosa 0.11 + numba 版本冲突, 换 numpy 算频谱统计) 369 通 cap5 + BC×3 = 2073 段 × 57d 1.5min 完成
+- 13:56 ★★ D-21 写: F0/spectral 末 8s 统计量证伪. cap1=0.4477 比 ctx 0.6228 低 0.175 (项目最差单源). BC 真正例 prob mean=0.004 < 真负例 0.016 = 反相关. 根因 = 用过去 8s 预测未来 2s 因果窗口不匹配. D-4 当时 |r|=0.128 应该是单帧瞬时 pitch / 短窗 voicing 模式. 真新方向只剩短窗声学 / 整通对话 transformer / pseudo-label 重训
+- 14:12 用户拒绝 cap1 红旗筛, 写 build_5submissions.py 构造 5 个候选 csv (Omni 单源 / SOTA+Omni 0.5/0.2 / SOTA+w2v2 T/I / 4 BC-aug 等权) 全 push 拿真分校准红旗本身
+- 14:30 ★★★★★ **真分到了, NEW SOTA**: cand2 (SOTA + Omni T/BC/I **0.8/0.2 软加**) = **0.728524 排名 14**, +0.011 vs old SOTA 0.71755. cand1 (SOTA+Omni 0.5/0.5) -0.027, cand3 (SOTA+w2v2 T/I 0.5) -0.003, cand4 (Omni 单源) 0.61305 (cap1 0.5649 → gap +0.048 远低于 ctx +0.088), cand5 (4 BC-aug 等权) 0.60734 (BC 归零). **D-22 写**: cap1 红旗 D-17/D-19/D-20 系统性错误, 软加 0.2 权 = 真融合范式, 6 天训的所有"证伪"源其实信号都在等被软加测试. 5/5 配额今天全用完, 明天 6/3 沿 cand2 思路扫多源软加冲前 10
+- 14:40 ★ 用户战略指示: ①8B 参数总和软约束 (心理有数, NEW SOTA cand2=9.4B 复赛镜像超额, 加 Omni-3B 备份) ②base 不必 0.71755, 任何子集都可能更优 ③5 fold ckpt 各自融合是新维度 ④到 6/16 还 40 push 配额, 6/10 前定基础模型. 写 build_softadd_candidates.py 14 候选备明日 push (Omni 权重扫 + 单源 0.2 软加 + 多源组合 + 替换 base)
+- 14:36 ★★ Omni 7B per-fold predict 完成 4.2min, fold 间 test probs std BC=0.077 I=0.063 (max-min 0.22/0.17) = 单 fold 真有多样性, 不是噪声. 5 fold ckpt 可当 5 个独立源软加
+- 14:55 ★ 启 Omni-3B 下载 (PID 2908, ~10GB ETA 30min) 作 8B 合规版备份. 跟 Omni-7B Thinker 同 API 可直接路径替换
+- 15:05 ★ 改 train_head_bcaug.py 加 --seeds 多 seed + --save-fold-ckpt + per_ckpt_test.npz 输出. 启 4heads_retrain (PID 3430) 串行 hubert/w2v2/e2v/whisper 各 3 seeds × 5 fold = 60 ckpt 总, ETA 2-3h. 出 per-ckpt test probs 可做 60+ ckpt 选最优软加组合
+- 15:50 ★★ hubert multi-seed 完成 33min: cap1=0.6287 (vs 旧 single-seed 0.6221 = **+0.0066 真涨**). 主要 I 类 +0.036. 项目级新发现 = multi-seed 训练自身就涨, 跟软加正交
+- 16:02 OOF 扫脚本 sweep_softadd_oof.py 跑 24 组合: Omni 0.10 OOF 最优 0.6575 (+0.0043 vs SOTA), 但真分曲线已知 0.20 (+0.011 真) 比 0.10 OOF 排名不一致 → 再次确认 D-22 OOF cap1 仅做粗筛
+- 16:08 w2v2 multi-seed seed=42 完 (18min 跑完 5 fold, batch=1024 vs hubert batch=256 总时间近似)
+- 16:20 ★★★ 三个下载全完成: Omni-3B (10GB), Qwen3-1.7B (3.7G), Qwen3-4B (~8G). modelscope 路径 . 转 ___ 需 symlink 修. 全部就位:  Qwen2.5-Omni-3B / Qwen3-1.7B / Qwen3-4B 加进可训清单. 8B 合规策略: Omni-3B 替代 Omni-7B (cand2 9.4B 超额)
+- 16:25 ★ handoff 落盘: docs/status/RESUME-NEXT-SESSION.md 重写完整 (今晚 4heads retrain + 3 模型下完 + 14 push 真分账本 + 单变量 push 候选). 4heads w2v2 fold 2 跑中, 估今晚 19:00-20:00 全 60 ckpt 完
+- 17:15 resume 触发 stale 自愈: CURRENT-STATE 刷到 D-22 范式反转 (NEW SOTA 0.72852 + 软加 0.2 范式 + multi-seed/per-fold 多样性源 + 合规 SOTA 双轨), INDEX 加 omni-lora-RESEARCH 行 + 标 SYNTHESIS 部分撤
+- 18:25 ★ v2 candidate builder + 全量 OOF 打分: 生成 29 候选 (含 multi-seed 路径), OOF Top1=C_omni020+e2v_ms010 +0.0066. 5 push 推荐按 9 维度采样 (A Omni 权重×2 + B 单源×2 + C 多源×1), RECOMMEND.md 落盘 tools/runs/climb/probe-softadd-v2-20260602-1814/
+- 18:25 gap 校准: SOTA-3src gap=+0.0644, cand2 gap=+0.0782 (Omni 软加扩 gap +0.014). 5 push 估真分上界 (gap=+0.080) 全部潜破 cand2 0.72852
+- 20:31 ★ whisper bcaug ms 完成 (ALL 4 HEADS DONE): cap1=0.6465 T=0.670★ I=0.523 BC=0.200. 但 ai 没盯 heartbeat 1h+ 空转
+- 21:40 补救主线: 拉 whisper ms probs 回本机 (probs.npz 3.3M / per_seed_oof 9.7M / per_ckpt_test 272K), 启 Omni-3B 训练 PID 15877 run_dir omni3b-lora-20260602-2138, ETA ~3-4h (01:00-02:00 完)
+- 21:39 ★ heartbeat 第一拍抓 Omni-3B crash: shape mismatch (4x2048 vs 3584x192) = HIDDEN_SIZE 写死 7B 的 3584. heartbeat 价值兑现 (vs 17:35 没盯 1h+ 空转)
+- 21:46 修 cloud/train_omni_head.py: HIDDEN_SIZE 改延迟初始化, main 内 _read_hidden_size(OMNI_DIR) 从 thinker config.json 动态读 (Omni-7B=3584 / Omni-3B=2048). rsync 上云
+- 21:48 重启 Omni-3B PID 16183. hidden_size=2048 正确, trainable=6.8M/total=4.7B (合规 8B), VRAM 8.9GB (vs 7B 24GB). 速度 ~0.62s/batch (warmup 后). ETA ~2h20m (~00:10 完). heartbeat 重挂 PID 57072
+- 22:10 sweep 重跑加 whisper_ms: 没新冠军 (Top1 仍 omni_0.10 +0.0043). whisper_ms 0.05/0.10 权重 T=0.667-0.670 进 OOF Top 17-18
+- 22:15 v2 重生 30 候选 + RECOMMEND 重写: 自决 Push 5 替换 w2v2_ms_0.2 (T -0.014 红旗) → whisper_bcaug_ms_0.2 (T=0.674 全场最高), 跟 Push 3 e2v_ms 形成 multi-seed T-strong A/B
+- 22:25 写 calibrate_push_results.py: 6/3 push 真分回来后跑 OOF/真分校准 + 维度 gap 分析 + 明日 6/4 策略建议
+- 22:28 hypotheses.yaml append 11 个 D-22 后新 hypothesis (H-D22-1~11): Omni-3B / per-fold / multi-seed / Qwen3-larger / isotonic / pseudo-label / F0-frame / TTA 等. pool 跳到 444 行
+- 22:32 写 perfold_softadd_scan.py + 跑: Omni 5 fold + 4 heads × 15 ckpt = 65 信号源, 生 15 per-fold/per-ckpt 候选. ★ PF_omni_max_w020 BC=26 (近 SOTA 27) + I=92 (最高) + T=540 (高) = 5fold per-sample confident vote 新维度. 落盘 tools/runs/climb/perfold-scan-20260602-2230/
+- 22:47 写 per_seed_test_compare.py + per_seed_oof_analysis.py: 4heads multi-seed 各 seed test pos 分析. ★ whisper seed=1 test pos dist=26 (vs SOTA 975/947/81/27/522), 比 mean dist=45 强. 4 heads BC 都崩 (mean 0-10 vs SOTA 27) = multi-seed 训练在 BC 上反向. per_seed_oof 是 bcaug 训练子集 (55877 / 199640), 非 cap1 子集, per-seed cap1 算不了
+- 22:47 生 PF_whisper_seed1_w020 csv (Push 5 备选), BC=14 (vs SOTA 27 = D-18 风险). 保留 Push 5 = PF_omni_max_w020 (BC=26 接近 SOTA, I=92, T=540)
+- 23:21 同步 climb storage (前严重滞后): runs.csv backfill 10 行 (6/1-6/2 push 15-24 全补), session-state.json 重写到 2026-06-02-d22 phase, regen-tree.md 刷到 25 runs + Omni-3B in-flight. cycle.sh _sync_state 主路径手动补
+- 23:24 ★★★ Omni-3B Thinker LoRA 完成 87.6min train + predict: cap1=0.625 (vs Omni-7B v4 0.5649 = +0.060). per_sub C=0.974 T=0.620 BC=0.182 I=0.487 NA=0.863. probs.npz 53KB 拉回本机
+- 23:31 v2 重生 37 候选加 Omni-3B (A3B 权重档 5 + C3B 多源叠加 2). 关键: Omni-3B 单源 cap1 比 7B 高 0.06, 但软加 OOF 不及 7B (0.25 OOF -0.0028 = Omni-7B 同权 -0.006 高). Top4 仍 Omni-7B 主导, Omni-3B Top候选 A3B_omni3b_w010 OOF +0.0017 第 4 名
+- 23:31 Omni-3B 8B 合规 push 候选已就位: tools/runs/climb/probe-softadd-v2-20260602-2330/A3B_omni3b_w020_TBCI/pred_test1.csv. 6/3 若 Push 1-2 (Omni-7B) 真分破前 20 但 9.4B 超额, 6/4 push 用 A3B_omni3b 0.20-0.25 替
+
+## 2026-06-03
+
+- 06:47 ★★★★★ 6/3 5 push 真分回: P1=0.7259 P2=0.7215 P3=**0.7327 NEW SOTA** P4=0.7167 P5=0.7267(omni3b_w015 实际). 维度 B (multi-seed 单源 0.2) gap 最大 +0.0780, OOF 跟真分顺序高度不一致 (P2 OOF Top1 真分倒2; P3 OOF -0.0001 真分 Top1)
+- 06:47 ★★ D-23 待写: Omni-3B 0.15 真分=0.7267 > Omni-7B 0.15 真分=0.7167 +0.010, 合规 8B 反胜超额 9.4B. e2v_ms 0.20 单源软加破 SOTA = multi-seed B 单源是真路径不是 multi-source 叠加
+
+## 2026-06-03
+
+- 06:53 ★★★★★ 6/3 5 push 真分回 (按实际上传, 不是我推荐顺序): P1=A_omni_w010=0.7259 / P2=C_omni020+e2v_ms_w010=0.7215 / P3=A_omni_w015=**0.732652 NEW SOTA** / P4=PF_omni_max=0.7167 / P5=A3B_omni3b_w015=0.7267. 我读错你顺序 (以为按 1-5 但你按候选名). NEW SOTA 是 Omni-7B 权重 0.15 (不是 0.20 cand2 也不是 e2v_ms B 类)
+- 06:53 D-23 候选: ①Omni-7B 权重曲线峰值=0.15 (非 0.20). 0.10=0.726, 0.15=**0.733**★, 0.20=0.729 (cand2), 0.50=0.691. ②Omni-3B 0.15 真分 0.7267, 比 Omni-7B 同权弱 0.006 但 8B 合规. ③OOF Top1 (C 多源叠加) 真分倒1, D-22 再强化: 多源叠加=多变量过拟合. ④per-fold max 真分倒2, H-D22-11 否决
+- 06:53 距前 3 门槛 0.7357 仅 +0.003. 6/4 沿 A 维度细粒度: w0125 / w0175 探峰值 + A 维 + B 单源 0.05 叠加 + Omni-3B 完整曲线
+- 08:14 用户反馈 "前 3 仍差很远, 别细微调, 扩大方向". 启 Qwen3-4B 训练 PID 339293, run_dir tools/runs/climb/qwen3-4b-head-20260603-0811, hidden_size=2560 (修 QWEN_DIM 动态读 config 跟 Omni 同款 bug). trainable=6.4M / total=4B 合规. ETA 10:30-13:00 完 (4-6h)
+- 08:14 同时生 6/4 26 候选 (probe-day3-20260603-0803): A 维 Omni-7B 峰值细粒度 + B' NEW SOTA + multi-seed 单源 0.05/0.10 + C' NEW SOTA + Omni-3B 微叠 + D cols 范围探 + Omni-3B 完整曲线
+- 08:14 6/4 5 push 推荐: P1=NSOTA+e2v_ms_w010 (OOF Top1) / P2=A_omni_w0125 (峰值左) / P3=A3B_omni3b_w020 (合规曲线) / P4=NSOTA+omni3b_w005 (双 Omni 多样性) / P5=A_omni_w015_TI_only (NEW SOTA cols 范围). 5 方向不集中
+- 08:31 6/4 5 push 真分: P1 NSOTA+e2v_ms_w010=**0.73007** (破 cand2 0.72852 +0.0016 但弱 NSOTA -0.003) / P2 A_omni_w0125=0.72642 / P3 A3B_omni3b_w020=**0.72735** (合规版近 cand2) / P4 NSOTA+omni3b_w005=0.72439 / P5 cols=TI_only=0.71661 (跌). NSOTA 0.7327 (6/3 push) 仍守 SOTA
+- 08:31 用户更新榜单: 前10=0.735752 (缺 +0.003!) / 前5=0.7423 / 前3=0.7460 / 第2=0.7475 / 第1=0.7547. 距前10 +0.003 = NSOTA 周围 noise floor, 必须新信号源破
+- 08:31 Qwen3-4B 进度: fold 3/5 ep 1, 单 fold ~10min, ETA ~10:00 完 (比原估 4-6h 快). 训练完后是文本端新维度 = 距前 10 +0.003 可期
+- 08:52 ★★ Qwen3-4B 完成 38.8min: cap1=**0.5701** (T=0.586 BC=0.000 I=0.425). BC=0 mean-pool 失败同款. 比 Omni-7B 略好 +0.005, 比 Omni-3B 弱 -0.055. probs.npz 拉回本机
+- 08:55 auto-chain 启 Qwen3-1.7B PID 786165 run_dir qwen3-17b-head-20260603-0852, VRAM 3.3GB. heartbeat 25699 watch, ETA ~30min
+- 08:58 6/5 候选 v1 生 19 个 (probe-day4-20260603-0856) 含 Q1-Q5 Qwen3-4B 多权重 + Q6 复现 + Q7/Q8 基座 multi-seed 替换. Qwen3-4B 软加 I 类大幅崩 (-10~-20 pos), Q7 (NSOTA 基座 wsp→wsp_ms) pos 几乎跟 NSOTA 相同 = 低风险高潜路径
+- 08:58 6/5 5 push 推荐: P1 Q7 wsp 基座升级 / P2 Q1 NSOTA+qwen4b 0.05 / P3 Q5 whisper_ms 软加 0.05 / P4 Q4 三模型微融合 / P5 Q6 复现锚点 (验跨日噪声)
+- 09:32 ★★★★★ 6/5 真分回: Q5=**0.7367 NEW SOTA 排名 8** (gap +0.0817 历史最大). Q7=0.7293 / Q1=0.7282 / Q4=0.7296 / Q6=0.7301 (跨日复现 6/4 P1 真分完全相同 = 投递可信). 距前 7 +0.001 / 前 5 +0.006 / 前 3 +0.009
+- 09:32 关键路径: NSOTA + whisper_ms 0.05 (Q5) = NEW SOTA 0.7367. whisper-large-v3 multi-seed 软加微权是新维度. OOF Top: Q5+e2v_ms 0.05 OOF=0.6576 (+0.0026 比 Q5 高)
+- 09:32 生 6/6 31 候选 (probe-day5-20260603-0931): A wsp_ms 权重曲线 + B Q5 + 多 ms 叠加 + C 基座升级 + D Omni 权重轴 + E/F cols 范围
+- 09:15 ★★ Qwen3-1.7B 完成 20.6min: cap1=**0.6117** (T=0.601 BC=0.167 I=0.455). 比 Qwen3-4B (0.5701) 强 +0.042 = 小 LLM 不过拟合 1845 训练集. BC=0.167 (4B BC=0) 也强. probs.npz 拉回
+- 09:34 Qwen3-1.7B OOF 软加发现: NSOTA+qwen17b_0.10 OOF=0.6574 (+0.0028 比 NSOTA 高) = 首个单源软加能抬 NSOTA 的源, 但 I pos 大幅崩
+- 09:34 6/6 5 push 最终: P1 Q5+e2v_ms 0.05 (OOF+0.0026) / P2 Q5+qwen17b 0.03 (Qwen3-1.7B 首测) / P3 Q5+hub_ms 0.05 / P4 wsp_ms 0.03 / P5 基座升级. Qwen3-4B vs 1.7B 容量对照: 1.7B 强 0.042 = 4B 在 1845 样本过拟合
+- 09:37 启 Qwen3-1.7B multi-seed (3 seed 42/1/7 串行) PID 413661 wrapper script /root/run_qwen17b_multiseed.sh, monkey-patch SEED 进 m.SEED. ETA ~10:40 完. heartbeat PID 42881 自动 scp 完成
+- 09:42 ★★★★★ 用户警告复赛过拟合风险. 跨切片 macro F1 分析: Omni-7B cap0=0.5649 cap4=0.5042 跌 0.061 = 高度依赖 cap0 首窗! Qwen3-1.7B range 0.107 最不稳, Qwen3-4B range 0.094 同款风险. 跨切片最稳: w2v2 (range 0.049) / whisper_bcaug (0.052) / e2v (0.052) / whisper (0.058)
+- 09:42 警示: 我们的 SOTA 0.7367 = 在 Omni cap0 强项上拟合的 cap1 OOF + cap1-4 切片在复赛镜像里大概率被惩罚. 紧急调策略: 减少 Qwen 系列 LLM 软加 + 用 SSL 音频稳源
+- 09:42 6/6 最终 5 push (复赛友好版): P1 Q5+e2v_ms 0.05 / P2 Q5+w2v2 0.05 / P3 Q5+wsb 0.05 / P4 SOTA+wsb 0.10 完全无 Omni 验真信号 / P5 SOTA+3稳源等权 0.04 (wsb+w2v2+e2v)
+- 09:58 用户论断: 高分来自多样性组合 (模型/范式/参数/种子/融合). 我已素材足够. 不极端两头: 不全 Omni 不弃 Omni
+- 09:58 启 Omni-3B multi-seed (3 seed 串行) PID 639992 wrapper /root/run_omni3b_multiseed.sh, 跟 Qwen3-1.7B ms (PID 413661) 并行. GPU 8/49GB 用, 富余. ETA Omni-3B ms ~14:00 (4.5h)
+- 09:58 6/6 最终 5 push (高多样性版, probe-diverse-20260603-0957): D1 6模型多源叠 / D3 Omni 5fold median 替 mean / D4 3 LLM 微权 / D5 基座全 ms 化 / Q5+hub_ms 0.05. 每 push 6+ 模型不同范式不同 seed
+- 10:15 用户战略: 时间充裕 (还 2 周, 12 天), 6/10 前模型/数据锁定上报 xinyebei@xinye.com. 报备清单: chinese-hubert/w2v2/e2v + whisper-large-v3 (非 Qwen 公开模型)
+- 10:15 深扫 OOF: 12 源 × 7 基座 × 4 权 × 3 cols ~1000 组合. 突破点: 新 base SOTA(wsp_ms+hub) + Omni 0.10 + e2v/wsb 0.10 = **OOF 0.6581 +0.005** (全场最高 OOF, 比 NSOTA new 0.6531 高). Omni 在新 base 上峰值变 0.10 (原 base 是 0.15)
+- 10:15 6/6 5 push 最终: P1 newbase+Omni010+e2v010 / P2 newbase+Omni010+wsb010 (并列 OOF 冠军) / P3 newbase+Omni010 锚点 / P4 三层 ms 叠 / P5 旧 Q5 路径对照
+- 10:32 GPU 4% 利用率诊断: 用户 fusion-control SAC RL (PID 548458) 在云上抢调度. Qwen3-1.7B ms (PID 413666) 已 51min 只 2 fold, Omni-3B ms (PID 639992) 32min 只 batch 1. 我的训练慢 6-12 倍但仍在跑
+- 10:32 用户保稳原则: 不杀任何主进程, 不重启, 不修 bug 折腾. 只清了 2 个我之前重启的孤儿 PID 740038/740170. SAC + Qwen3-1.7B + Omni-3B 三训练共存让 GPU 自行调度
+- 10:32 重新评估 ETA: Qwen3-1.7B ms 12-15h (晚上 22-24 完) / Omni-3B ms 跑不完 (24h+, 可能凌晨明天). 6/10 锁定时间宽裕, 不催
+- 10:50 老毛病重犯: 本机 6/2 留的 39h Qwen3 dry-run 僵尸 PID 20110/20112 + 多个 hb watcher 一直 ssh 轮询云端. 加上用户 SAC RL 同时跑导致云 CPU/内存 99%, ssh 不通
+- 10:50 清理本机: 杀僵尸 Qwen3 + 杀 qwen17b_ms_hb watcher + 删 /tmp 6 个 hb 脚本和 log (避免自动重启)
+- 10:50 用户关机重启云主机, 云端进程全清. Qwen3-1.7B ms / Omni-3B ms 训练终止 (硬盘 ckpt 保留). 决定: 不再启大模型 ms 训练, 数据池已足够多样性
+- 10:57 用户要求云主机独占, 我决定不再启任何云端训练. 放弃: Qwen3-1.7B/4B ms / Omni-3B ms / Omni-7B ms (边际收益 +0.005 不值占 GPU). 14 模型素材足够多样性
+- 10:57 不再发 ssh 给云主机. 后续操作纯本机: 6/6 5 push csv 已就位 → 等真分 → 本机校准 → 6/7 候选生成 (不依赖云端)
+- 10:57 后续 ms 训练只在用户明确说"现在可以用云" 时启动
+- 11:01 用户要求全训完. 总编排脚本 /root/run_all_ms.sh 启动:
+  Stage 1 (并行): Qwen3-1.7B ms + Qwen3-4B ms + Omni-3B ms (3 seed 各自串行, ETA ~4.5h)
+  Stage 2 (独占): Omni-7B ms 3 seed 串行 (ETA ~9.5h)
+  总 ETA: ~14h, 完成时间 ~01:00 (6/4 凌晨)
+- 11:01 GPU 现在 11.5GB / 49GB, 富余. PID 4863 主 wrapper, 子: 4878 (qwen17b) / 4879 (qwen4b) / 4880 (omni3b)
+- 11:01 不再启 watcher (上次诊断 watcher 频繁 ssh 是云端 99% 元凶). 用户自己看进度. 启动后我不再发 ssh
+- 14:38 用户提醒"LoRA 应该常识 save adapter only". 找到 train_qwen3_head.py:410 bug: torch.save(model.state_dict()) save 了完整 Qwen3 base + LoRA = 3.5G/7.6G per ckpt, 应只 save LoRA + head (像 Omni 脚本一样)
+- 14:38 磁盘 100% 真凶: Qwen3-1.7B 3 seed × 5 fold = 51G + Qwen3-4B 2 seed × 5 fold = 73G + 老 ckpt = 191G, 324G 盘满, 所有训练失败不是 GPU OOM 是 disk write 失败
+- 14:38 修 train_qwen3_head 改 LoRA-only save (跟 Omni 模式同) + 写 predict_qwen3_only.py 用 strict=False 加载老 ckpt 跑 predict_test 补 probs + 完后自动删 17G ckpt 腾盘
+- 14:38 启 predict_only.sh PID 989168, ETA 2-3h 拿 4 seed probs (Qwen3-1.7B seed=42/7 + Qwen3-4B seed=42/1). Omni-3B 4 ckpt 不完整放弃, Omni-7B 没启
+- 15:05 修 LoRA-only save bug 后启 v2 重训: PID 992662 wrapper, 3 并行 Qwen3-1.7B/4B/Omni-3B + Stage 2 Omni-7B 串行. v2 run_dir 后缀 -ms2-. ETA ~13h 全完 (~04:00 6/4 凌晨). 磁盘 210/324 安全
+- 15:05 全部清掉损坏 v1 ckpt 释放 107G 盘 (qwen17b seed42/7, qwen4b seed1/42, omni3b seed42 共 107G 损坏文件). 保留唯一可用 Qwen3-1.7B seed=1 probs.npz (54KB, 13:23 写, 磁盘没满时)
+- 15:11 用户提示备份存 ModelScope (但实际不适合训练中间 ckpt). 改正确做法: 删 single-seed 旧训练 ckpt 留 probs.npz, 释放 77G (qwen06b 5.6G + qwen17b single 17G + qwen4b 38G + qwen17b ms seed1 17G). probs.npz 完整保留 (融合所需)
+- 15:11 磁盘 134G/324G 用, 190G 空闲. v2 训练富余空间. 4 个 probs.npz 数据无损保留: qwen3-0.6B + qwen3-1.7B single + qwen3-4B + qwen3-1.7B ms seed=1
+- 19:06 v2 进展 (15:04 启 → 19:05 现, 4h): ✅ Qwen3-1.7B ms 3 seed 全完成. cap1 seed42=0.6082 seed1=0.5961 seed7=0.6129. ms 涨幅小 (vs single seed 0.6117), 不及 hubert/w2v2 ms (+0.018/+0.020). LoRA-only save 生效 ckpt 14MB
+- 19:06 ⏳ Qwen3-4B ms: seed=42/1 train 完但 probs 等 predict 排队 (GPU 被 Omni-3B 占), seed=7 fold 3/5 train. Omni-3B ms seed=42 train 完进 predict_test. Omni-7B 排 Stage 2 还没启
+- 19:06 Qwen3-1.7B 3 seed probs 已拉本机, 可加进融合候选包. hb 重启监控 v2 主 wrapper 992662
+
+## 2026-06-04
+
+- 08:47 云端 v2 ms2 重训查证: Qwen3-1.7B / Omni-3B / Omni-7B 全 3 seed 完成 probs 就位. Qwen3-4B 三 seed train 完但 predict_test OOM (5 fold 一起 load = 25GB + 并行 Qwen3-1.7B 17GB → 48G 卡只剩 38MB) + predict_qwen3_only.py 补救脚本 bc_aug_n TypeError 4 次 silent fail 都被 wrapper 当成 done. 用户决放掉 Qwen3-4B
+- 08:47 ★ 根因复盘: ①train_qwen3_head.py predict_test 一把 load 5 fold 应改逐 fold ②test predict 失败连 OOF 也丢, 应该 train 完先 save OOF 再 predict ③补救脚本没本机 dry-run, 上云首跑就 TypeError ④日志"done"是 wrapper 自己 echo 跟 probs.npz 无关 — 我把"训完"等同"产 probs", 漏了"文件存在+大小>0"判据
+- 09:04 拉 9 个 v2 ms2 probs 回本机. merge_3seed 脚本 mean → omni-7b/3b-ms2-mean-3seed + qwen17b-ms2-mean-3seed
+- 09:04 以 Q5 (0.7367) 为 base 跑 OOF 扫描含 v2 ms2 新源. OOF Top: Q5+omni 0.10 +0.006 / Q5+qwen17b_ms2 0.03 +0.0008 / v2 ms2 三新源 OOF 多数 ≤ Q5
+- 09:15 生成 P1/P2/P3 csv (probe-day6-20260604-0915): P1=Q5+omni_w010 / P2=Q5+omni_ms2_w005 / P3=A3B_omni3b_ms2_w020
+- 09:16 用户实际从 probe-day5 + probe-diverse 选 5 push (不用我新 day6 包). 候选: A_NSOTA+wsp_ms_w0070 / B_Q5+e2v_ms_005 / B_Q5+hub_ms_005 / C_NSOTA(wsp→wsp_ms)+omni015 / D3_Omni_median_5fold+Q5
+- 09:16 ★★★★★ **NEW SOTA = 0.738899**: A_NSOTA+wsp_ms_w0070_TBCI (= Q5 wsp_ms 权重 0.05→0.07). 距前 7 +0.002 / 前 5 +0.004 / 前 3 +0.007. wsp_ms 权重曲线峰值 ≥ 0.07 (待 0.10 验)
+- 09:16 D3 Omni 5fold median 真分 0.7365 (≈ Q5 -0.0002 = noise floor) = per-fold median ≈ mean 等价, H-D22-11/PF 路径再否决
+- 09:16 D-23 子论再补: ①A_w007 OOF 0.6510 < Q5 0.6535 但真分 +0.0022 = OOF 跟真分顺序又反转 ②B_Q5+e2v_ms/hub_ms 都 ΔQ5_真分 < 0 (-0.003/-0.004) = SSL ms 0.05 软加 Q5 base 已不提升 (Q5 base 已含 wsp_ms 软加占了 SSL 多样性额度) ③C base 替换 (wsp→wsp_ms)+omni 0.15 真分 -0.007 = wsp_ms 不能既做 base 又做软加
+- 09:30 写 docs/status/2026-06-04-submission-strategy.md (25 push 账本 + 跨切片稳定性 + 6/5-6/16 节奏 + R1-R6 复赛镜像合规组合). 生成 submission/finals-20260604/ 5 个 csv (R5 0.7389 / R1 0.7338 / R3 R4 R6 待验)
+- 10:00 ★★★★★★ **NEW SOTA = 0.745798** R4 = NSOTA_07 + e2v_ms 0.03 + hub_ms 0.03 (双 SSL 低权微叠). +0.0069 vs R5 0.7389. **实际排名第 4 (不是第 3, 我之前读错 5/27 快照)**: 第 1 = 0.75471 (新榜首, 5/27 没出现) / 第 2 = 0.747489 / 第 3 = 0.74603 / **第 4 = R4 0.7458**. 距第 3 +0.0002 / 第 2 +0.0017 / 第 1 +0.009. 榜单动态, 对手也在 push
+- 10:00 R6 (NSOTA_07 + e2v_ms 0.03 单源) 真分 0.7374 < R5 0.7389 = e2v_ms 0.03 单加反降 0.0015. 但 R4 (R6 + hub_ms 0.03) +0.0084 = **e2v_ms + hub_ms 协同效应, 不是单源叠加**. 单一 SSL_ms 加 NSOTA 已无空间, 双 SSL_ms 才解锁新维度
+- 10:00 R3 SOTA + wsb 0.10 真分 0.7362 (gap +0.087 全场最大). wsb 单源 0.10 = +0.019 vs SOTA-3src, 仅次于 wsp_ms 0.07 (+0.023). wsb 是 wsp_ms 的 single-seed 弟弟, 0 wsp_ms 也能产 0.736 = 复赛镜像极端友好版可行
+- 10:00 D-23 第 N 次反转: R4 OOF 0.6489 < R5 0.6510 但真分 +0.0069. **OOF 不只跟真分顺序不一致, 量级也不一致** (R4 OOF -0.0021 真分 +0.0069 = 3.3x 反向). 双 SSL_ms 微叠效应 OOF 完全测不出
+- 10:00 复赛镜像主力 = R4 (8B 合规, ~1.7B 总参) 真分 0.7458 + R1 (~1.5B) 真分 0.7338 安全网 + R5 (~1.5B) 真分 0.7389. 三档全部 8B 合规 + 跨切片范围 0.058-0.061. 6/10 报备清单不变 (chinese-hubert/w2v2/e2v + whisper-large-v3)
+- 13:30 用户指 docs/赛题要求.md, 我 grep 纯文本说"赛题里没明写动态时长"被用户纠正. 漏读 md 开头 3 张 .jpg 图. 下载图 1 (赛题介绍.jpg) 读出**白纸黑字**写: "测试集 2 ... 同时上下文分成动态时长, 即上下文+2s 不再固定为 30s, 在 (0, 30] 之间". 教训: md 里 ![img] 引用必须立即下载读图, 不能 grep 纯文本就下结论
+- 13:30 D-26 落盘: 我们整套 R4 全栈深度硬编码 CTX=375 chunk × 80ms = 30s, 复赛动态时长 (0, 30] 任意 (1s 也合法) 下会全栈失效. 估真分跌 0.05-0.15
+- 13:30 finals/FINAL-PUSH-TASKS.md 落盘: 5 个针对性任务 T1=推理归一化 (1 天) / T2=train 变长重训 (5-8h) / T3=cross-context 内部对照 (不耗 push) / T4=复赛 docker prototype (6/9 起) / T5=6/8 前发报备邮件. 节奏修订: 心态从"公榜冲第 1"转"复赛准备最优 + 公榜稳第 4-5"
+- 14:30 ★ T1 实现 + T3 内部实测: 写 tools/climb/dynamic_ctx_utils.py (normalize_ctx_to_375/simulate_truncated_context/featurize_variable_length) + eval_dynamic_ctx.py 实测 ctx-only macro F1 vs 截短长度. ★ **退化曲线远好于事前估**: 截到 10s 仅跌 0.029 (5%), 截到 5s 跌 0.044 (7.6%), 1s/2s 才大跌 (>0.075)
+- 14:30 R4 截短公榜验证 csv 已生成: submission/truncated-validation-20260604/{R4_keep125_ctx10s,R4_keep63_ctx5s}/pred_test1.csv. pos 变化: NA 飙升 947→996→999 / C 急跌 975→920→794 / BC/I 砍半 / T 几乎不变. 1-2 个 push 即可实测 R4 真分退化
+- 14:30 推算 R4 全栈复赛真分: ctx 在 R4 中只占 C/BC/NA 列 + I 列 1/3, 实际 R4 退化 ≈ ctx 退化 × 0.5 → 测试集 2 (0,30]s 均匀分布估真分 0.72-0.74 (远好于事前估 0.60-0.70 范围)
+- 14:30 落盘答辩金料: docs/finals/charts/cross-context-degradation-20260604.md (T3 cross-context 表 + R4 退化推算 + 评委追问应答稿)

@@ -1,106 +1,42 @@
 {
   "_schema_version": 1,
-  "session_id": "2026-06-01-top20-attack",
-  "phase": "D-13 激活前 20 攻坚战。SOTA 0.71529 = 排行榜第 37 名 (前 40 进复赛, buffer 3 名危险)。目标 0.7243 (前 20 门槛, 缺 +0.009)。三轨并行: B4 Knowledge Layer 今天 / B3 后处理 / B1 ctx v3 特征工程",
-  "last_cycle": 19,
+  "session_id": "2026-06-02-d22-softadd-paradigm",
+  "phase": "D-22 范式反转后. NEW SOTA 0.72852 (Omni-7B 软加 0.2, 9.4B 超 8B). 合规 SOTA 0.71755 (3src). 冲前 20 (门槛 0.7256), 前 10 (~0.748). 剩 8 天 × 5 push = 40 push 配额. 6/10 前定基础模型.",
+  "last_cycle": 24,
+  "best_online": 0.72852,
+  "compliant_best_online": 0.71755,
   "in_flight": {
-    "task": "N1' (whisper/hubert head + DB-Loss + SupCon) 云上待启动. 本机攻坚 B4/B3d/B1 v3 + 原 N1 全证伪",
-    "host": "云上 AutoDL 4090 (关机中, 等用户决策开)",
-    "started_at": "2026-06-01T11:21 (handoff)",
-    "deadline": "ETA 启动后 20-30min GPU + 30min rsync/setup",
-    "next_action": "用户决策开云机 → rsync cloud/train_head_n1.py → 跑 5fold 15ep → probs.npz 拉回本机 → orthofuse 重做",
-    "code_ready": "cloud/train_head_n1.py 已写好, 派生 train_head_hubert.py, 替换 BCE 为 DB-Loss + α·SupCon",
-    "decision_gate": "单源 cap1 ≥ 0.6289 进 orthofuse, orthofuse 后 cap1 ≥ 0.6460 push",
-    "fallback": "若 cap1 <0.6289, SKIP; D-13 失效则回 D-12 接受 0.71529, 转复赛镜像准备"
+    "task": "无 (Omni-3B 23:24 完成, heartbeat 自动退出. 5 push 候选全就位)",
+    "next_action": "用户 6/3 提交 5 push 后贴真分回来, 跑 tools/climb/calibrate_push_results.py --scores S1 S2 S3 S4 S5"
   },
-  "completed_today_phase1": [
-    {"task": "B4 Knowledge Layer", "result": "找 N1/N2/N3, B2 取消", "report": "2026-06-01-knowledge-layer-findings.md"},
-    {"task": "B3d 校准头 ctx+whisper OOF", "result": "OOF +0.031 真训练增益但 cap1=SOTA. D-14 闭合: 校准头无新源不涨 cap1", "artifacts": "tools/runs/climb/b3d-calib-20260601-1008/"},
-    {"task": "Chain-first 救命 bug", "result": "B3d cap1 定义+阈值错 → 假涨 +0.041 实际 0. 救回 1 次提交配额"},
-    {"task": "B1 EDA v3 候选", "result": "47 候选 info>0.15 强特征", "artifacts": "docs/status/2026-06-01-b1-eda-v3-features.json"},
-    {"task": "B1 v3 ctx 重训", "result": "OOF Δ+0.0006, cap1 Δ-0.004 → SKIP. D-12 '46d 榨干' 实证", "artifacts": "tools/runs/climb/ctx-v3-20260601-1055/"},
-    {"task": "N1 原方案 chain-first 否决", "result": "本机重训 whisper head 不可行 (frames 在云端 64GB). 改 N1' 云上"}
-  ],
+  "omni3b_result": {
+    "run_dir": "tools/runs/climb/omni3b-lora-20260602-2147",
+    "cap1": 0.625,
+    "per_sub": {"C": 0.974, "T": 0.620, "BC": 0.182, "I": 0.487, "NA": 0.863},
+    "train_minutes": 87.6,
+    "vs_omni7b_v4": "cap1 +0.060 vs 7B 0.5649, 但软加 OOF 不及 7B (Omni-3B 0.20 OOF -0.003 vs 7B 0.20 OOF -0.003 同水平). Push 候选 ✓"
+  },
   "completed_today": [
-    {
-      "task": "B4 Knowledge Layer",
-      "result": "找到 3 候选方向 N1/N2/N3. 决策: N1 DB-Loss+SupCon 优先. B2 取消 (16 天来不及)",
-      "report": "docs/status/2026-06-01-knowledge-layer-findings.md"
-    },
-    {
-      "task": "B3d DB-Loss+SupCon 校准头",
-      "result": "OOF +0.031 真训练增益, 但 cap1 = SOTA (Δ=0) → SKIP. D-14 闭合: 校准头无新源不涨 cap1. B3d/N1 路线收口",
-      "artifacts": "tools/runs/climb/b3d-calib-20260601-1008/, b3d-orthofuse-20260601-1029/"
-    },
-    {
-      "task": "Chain-first 救命 bug",
-      "result": "B3d cap1 定义错(末窗) + 阈值错(BC 0.5 应 0.75), 假高 +0.041 实际 0. 救回 1 次提交配额避 D-11"
-    },
-    {
-      "task": "B1 v3 EDA",
-      "result": "47 候选特征 vs 5 类 AUC, 找到 30+ info>0.15 强 v3 特征 (runlen_*, burst_*, trans_*, diff1/2_*)",
-      "artifacts": "docs/status/2026-06-01-b1-eda-v3-features.json"
-    }
+    {"time": "06:59", "task": "Omni-7B Thinker LoRA v1-v4 (4h 调试)", "result": "v4 fold 4 crash → resume → 完成. cap1=0.5649 单源弱 D-20"},
+    {"time": "14:12", "task": "5 push 配额: cand1-5", "result": "cand2 SOTA+Omni 0.2 真分 0.72852 NEW SOTA D-22 范式反转"},
+    {"time": "15:05", "task": "4heads multi-seed retrain (PID 3434)", "result": "ALL 4 HEADS DONE 20:31. hubert +0.007 / w2v2 +0.020 / e2v +0.003 / whisper +0.018 cap1 真涨"},
+    {"time": "18:00", "task": "build_softadd_candidates_v2 + OOF 打分 (29 候选)", "result": "Top1 C_omni020+e2v_ms_w010 OOF +0.0066"},
+    {"time": "21:39", "task": "Omni-3B 启动 1st crash", "result": "shape mismatch (HIDDEN_SIZE 写死 7B 3584), heartbeat 即时抓到"},
+    {"time": "21:46", "task": "修 train_omni_head.py HIDDEN_SIZE 动态读 config.json", "result": "上云 + 重启 OK"},
+    {"time": "22:30", "task": "perfold_softadd_scan (15 per-fold/per-ckpt 候选)", "result": "PF_omni_max_w020 BC=26 I=92 T=540 接近 SOTA pos"},
+    {"time": "22:45", "task": "RECOMMEND v3 (Push 5 替换 → PF_omni_max_w020)", "result": "5 push 维度覆盖 A×2 + B×1 + C×1 + D×1"},
+    {"time": "22:50", "task": "per_seed_test_compare 分析", "result": "whisper seed=1 dist=26 最强 (vs mean dist=45), 但 BC=8 不能单独 push"}
   ],
-  "last_result": {
-    "cycle": "D-12 闭合 → D-13 撤回激活前 20 攻坚",
-    "verdict": "战略反转: 用户提供排名信息 (第 37 名 / 前 20 门槛 0.7243) 后 D-12 'F接受 0.71529' 失效。D-13 用前 20 门槛重新评估 D-12 自己列的 '真正未试' 4 条 (B1/B2/B3/B4) → 2 条 +0.005 可达",
-    "real_sota_final": "orthofuse-20260531-0319 = 0.71529 (双源 ctx + whisper, T=w70 / I=whisper)",
-    "decision_context": "保留 D-1~D-12 全部铁律 (cap1 选 strat / 加源 / context 内算法集成 不复活), 攻击面 = 4 条未试方向"
-  },
-  "confirmed": [
-    {
-      "run": "orthofuse-20260531-0319",
-      "online": 0.71529,
-      "cv_cap1": 0.6410,
-      "note": "★SOTA。context×whisper跨源per-class正交融合(T借w70/I借whisper). 排行榜第 37 名"
-    },
-    {
-      "run": "variant-F-20260528-0559",
-      "online": 0.712424,
-      "cv_cap1": 0.6402,
-      "note": "前SOTA。5seed概率平均集成+cycle1固定阈值。仍是orthofuse的context基座来源(单模lgbm_v1)"
-    },
-    {
-      "run": "20260527-1636-h001-context-only",
-      "online": 0.710789,
-      "cv": 0.5908,
-      "note": "首个SOTA(cycle1纯上下文LGBM)"
-    }
+  "best_online_route": "probe-5push-cand2-omni020-20260602-1412 = 0.72852 (Omni-7B Thinker LoRA + SOTA-3src 软加 0.2 T/BC/I)",
+  "pending_lb": [
+    {"name": "6/3 5 push 待用户提交", "csvs": [
+      "tools/runs/climb/probe-softadd-v2-20260602-2210/A_omni_w010_TBCI/pred_test1.csv",
+      "tools/runs/climb/probe-softadd-v2-20260602-2210/C_omni020+e2v_ms_w010/pred_test1.csv",
+      "tools/runs/climb/probe-softadd-v2-20260602-2210/B_e2v_ms_w020_TBCI/pred_test1.csv",
+      "tools/runs/climb/probe-softadd-v2-20260602-2210/A_omni_w015_TBCI/pred_test1.csv",
+      "tools/runs/climb/perfold-scan-20260602-2230/PF_omni_max_w020/pred_test1.csv"
+    ]}
   ],
-  "pending_lb": [],
-  "best_online": 0.71529,
-  "target_online": 0.724337,
-  "gap_to_target": 0.009,
-  "current_rank": 37,
-  "target_rank": 20,
-  "next_hypothesis": "B4 Knowledge Layer 优先 (0 算力, 1 天出方向判断)。无需选下一假设, 先研究再决定 B1/B2/B3 优先级",
-  "next_action": "tools/climb/consult-ais.sh 三方 quorum + WebSearch + 写 docs/status/2026-06-01-knowledge-layer-findings.md (1 天截止)",
-  "push_floor_cap1": 0.6460,
-  "push_floor_reason": "D-13 + D-9 noise floor 0.003 校准: SOTA cap1 0.6410 + 0.005 = 0.6460, 才有 +0.001 线上信号期望",
-  "falsified_routes": [
-    "context-v2 (线上0.683)",
-    "廉价声学(BC无效)",
-    "文本词汇(BC无效但帮T/I)",
-    "Qwen3-0.6B pooled→LGBM/神经头(冻结pooled对turn-taking无效)",
-    "VAP-mel双声道音频(BC0.198<纯ctx0.227)",
-    "whisper本机不可行(卡机/太慢)",
-    "切片阈值变体B(砸NA)",
-    "rank平均集成C(BC崩)",
-    "cloud-whisper-large-v3-vap 冻结encoder+小头(最高0.671<<SOTA 0.712)",
-    "context内融合grid/stacking(真分0.679<<SOTA, 4成员不正交nested过拟合, BC0.364→0.200蒸发)",
-    "VAP-CPC全量微调单模(真分0.679, vap-cpc-stereo gap≈-0.01, BC0.222与LGBM打平未兑现文献BC+0.3)",
-    "LoRA whisper 全量(30-63h不可行)/cap5欠拟合(线上 0.6155)",
-    "加 4/5 源 (w2v2/e2v cap1 0 贡献, D-10)",
-    "BC cap1 选 strat (mlp+whisper_70 cap1 +0.108 → 真分 -0.022, D-11)",
-    "LGBM 超参 sweep (baseline 即最优, D-12)"
-  ],
-  "active_routes_D13": [
-    "B1 ctx 特征工程 v3 (本机 1-2 天, 期望 +0.003~0.010)",
-    "B2 整通对话神经预测 (云上 1-2 天, 条件触发待 B4)",
-    "B3 后处理 / TTA / 半监督 (本机 0.5-1 天, 期望 +0.001~0.005)",
-    "B4 Knowledge Layer (今天 0 算力, 找全新正交信号源)"
-  ],
-  "last_updated": "2026-06-01T09:30:00",
-  "_note": "D-13 激活: 撤 D-12 接受论, 前 20 攻坚战启动。完整作战图见 docs/status/2026-06-01-top20-attack-plan.md, D-13 决策见 DECISIONS.md。push 门重校准 cap1 ≥0.6460。"
+  "next_session_first_action": "1) 查 Omni-3B 完成情况 2) scp probs 回本机 3) 重生 v3 候选包加 Omni-3B 4) 用户 6/3 5 push 真分回来后跑 calibrate_push_results.py",
+  "last_updated": "2026-06-02T22:55:00"
 }

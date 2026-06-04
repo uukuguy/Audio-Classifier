@@ -1,172 +1,144 @@
 # Next-Session Handoff
 
-**Updated:** 2026-06-01 11:21（D-13 第一日 91min 全收口 + 三轨本机证伪 → N1' 云上待启动）
-**恢复命令：`/project-state resume`**
+**Updated:** 2026-06-04 15:00 (R4 NEW SOTA 0.7458 第 4 + D-26 复赛动态时长 + T1/T3 完成)
+**恢复命令:** `/project-state resume`
 
-## TL;DR
+## TL;DR (3 句)
 
-1. **形势**: SOTA 0.71529 = 排行榜**第 37 名**(前 40 进复赛, buffer 3 名极危险), 目标 0.7243(+0.009), 剩 **15 天** 到 6/16.
-2. **D-13 第一日完整收口** (6/1 09:30-11:21, 0 提交配额消耗): **三轨本机攻击面全证伪**:
-   - ✅ B4 Knowledge Layer (1h): gemini consult + 9 路 WebSearch + arxiv 2 篇. 锁 N1 优先, B2 取消
-   - ❌ B3d (校准头 ctx+whisper OOF): OOF +0.031 但 cap1=SOTA → SKIP. **D-14 闭合: 校准头无新源不涨 cap1**
-   - ❌ B1 v3 (46d→93d 加 EDA 强特征): OOF +0.0006, cap1 -0.004 → SKIP. **D-12 "46d 榨干"实证**
-   - 🟡 N1 原方案 (本机 whisper head 重训) chain-first 否决 (frames 在云端 64GB, 本机不可行)
-3. **唯一活路 = N1' 云上**: `cloud/train_head_n1.py` 已写, 派生 train_head_hubert.py, 替换 BCE 成 DB-Loss + α·SupCon. 用 whisper frames + ctx 训, **whisper 单源 BC cap1 0.20 (vs hubert 0.0) = SupCon 有 BC 正样本可学**. ETA 20-30min GPU + rsync.
-4. **用户已扩容云机系统盘 200G** ✅ (准备好做 N1' / 复赛镜像)
-5. **handoff 时未推进的开放问题**: 是否开云机做 N1', 还是直接收手转复赛镜像准备.
+1. **🏆 R4 = 0.745798 排第 4** (NSOTA_07 + e2v_ms 0.03 + hub_ms 0.03 双 SSL 协同, 8B 合规). 距第 3 (0.74603) 仅 +0.0002, 距第 2 (0.747489) +0.0017, 距第 1 (0.75471) +0.009.
+2. **⚠ D-26 复赛动态时长**: 赛题要求图 1 明写"测试集 2 上下文 (0, 30]s 任意". 全栈硬编码 30s=375 chunk 需变长适配. T1/T3 已完成实测: **截到 10s ctx 仅跌 0.029 (5%)**, R4 全栈估退化 0.01-0.02 = 真分估 0.72-0.74, 远好于事前估的 0.60-0.70.
+3. **战略转向**: 公榜冲分边际递减 (对手在动), **重心转复赛准备** + 公榜稳第 4-5. T1-T5 任务进度见 `docs/finals/FINAL-PUSH-TASKS.md`.
 
-## 攻击面状态 (D-13 攻坚战)
+## R4 NEW SOTA 详情 (6/4 9:30 push 真分回)
 
-| 轨道 | 状态 | 真实结果 | 下一步 |
-|---|---|---|---|
-| B4 Knowledge Layer | ✅ | 找 N1/N2/N3 三方向, B2 取消 | 报告完整 |
-| B3d (本机 OOF 校准) | ❌ SKIP | OOF Δ+0.031, cap1=SOTA, BC corr 0.69 但 cap1 持平 | D-14 闭合 |
-| B1 v3 (ctx 特征工程) | ❌ SKIP | OOF Δ+0.0006, cap1 Δ-0.004 | D-12 验证 |
-| **N1' (云上 whisper head DB-Loss+SupCon)** | 🟡 待启动 | — | **等用户决策开云机** |
-| N2 (Omni-7B LLM judge) | ⚪ 备 | cycle 11 Omni-3B zero-shot 已踩坑(全答是), Omni-7B 新架构未试 | 仅 N1' 失败再考虑 |
-| N3 (韵律 token + Qwen2.5-7B LoRA) | ⚪ 备 | 6-10h 重投入 | 仅 N1'+N2 失败再考虑 |
-
-## 当前阶段时间线
-
-| 日期 | 节点 | 状态 |
+| 候选 | 真分 | 备注 |
 |---|---|---|
-| **6/1** | D-13 第一日 91min 三轨证伪 + N1' 准备 | ✅ |
-| 6/2 (下一 session) | 启动 N1' 云上 + 若 SKIP 走 N2/N3 决策 | 🔄 |
-| 6/3-6/9 | 视 N1' 结果, polish + 第二轮 push | ⚪ |
-| **6/10 前** | 🔴 合规报备邮件硬截止 → `xinyebei@xinye.com` | ⚪ |
-| 6/16 | 初赛阶段一结束 | |
-| 6/17 | TOP 40 公布 + 代码评审包提交(已就绪) | 🎯 |
+| **R4 NSOTA_07 + e2v_ms 0.03 + hub_ms 0.03** | **0.745798** | 🏆 NEW SOTA, 8B 合规 ~1.7B 总参 |
+| R5 NSOTA_07 (wsp_ms 0.07) | 0.738899 | 6/4 早 SOTA, 单 SSL 软加 |
+| D3 Omni 5fold median + Q5 | 0.736531 | per-fold median ≈ mean (H-D22-11 否决) |
+| B_Q5+e2v_ms_w005 | 0.733773 | 单 SSL ms 0.05 软加 Q5 (反降 -0.003) |
+| B_Q5+hub_ms_w005 | 0.732356 | 同上 |
+| C_NSOTA(wsp→wsp_ms)+omni015 | 0.729264 | base 替换失败 (-0.007) |
 
-## In-flight（下次 session 第一步）
+**D-25 核心发现**: 单 e2v_ms 0.03 软加 NSOTA_07 真分 -0.0015 (反降), 单 hub_ms 0.03 同样估也 -0.0015, **但两者一起加 +0.0084** = R4 0.7458. **非加法的协同效应**, OOF 完全测不出 (R4 OOF -0.0021 真分 +0.0069 = 3.3x 反向).
 
-**🟡 N1' 云上启动** (cloud/train_head_n1.py 已写好):
+## ⚠ D-26 复赛动态时长 (我之前漏读图 1, 用户纠正)
 
-```bash
-# 1. 开云机 (用户操作 AutoDL 后台)
-# 2. rsync N1 脚本上云
-rsync -avz -e "ssh -p 46379" cloud/train_head_n1.py root@connect.westd.seetacloud.com:/root/audio-classifier/cloud/
+**约束**: 赛题要求图 1 原文: "测试集 2 ... 同时上下文分成动态时长, 即上下文+2s 不再固定为 30s, **在 (0, 30] 之间**"
 
-# 3. 云端启动 (用 hubert cache 测先, 或重新提 stride40 whisper)
-ssh -p 46379 root@connect.westd.seetacloud.com "cd /root/audio-classifier && \
-  WCACHE=/root/autodl-fs/hubert_cache OMP_NUM_THREADS=4 \
-  setsid nohup python cloud/train_head_n1.py \
-    --epochs 15 --alpha 0.3 \
-    --run-dir tools/runs/climb/n1-hubert-dbloss-\$(date +%Y%m%d-%H%M) \
-    </dev/null >/root/n1.log 2>&1 &"
+**应对进度 (T1-T5)**:
 
-# 4. heartbeat + 等结果 (ETA 20-30min)
+| 任务 | 状态 | 完成 % |
+|---|---|---|
+| T1 推理归一化 (`normalize_ctx_to_375`) | ✅ 实现 + 单元测试通过 | 70% |
+| T1 公榜验证 R4 截短 csv | ⏳ csv 就绪 (R4_keep125/63), 等 push | 30% |
+| T2 train 变长模拟重训 | ⏳ 未启动 (T3 显示退化小, 可能不需要做) | 0% |
+| **T3 cross-context 内部对照** | ✅ **实测完成** | 100% |
+| T4 复赛 docker prototype | ⏳ 未启动 | 0% |
+| T5 报备邮件 (6/8 前发) | ⏳ 草稿就绪未发 | 0% |
+
+**T3 实测核心数据** (`docs/finals/charts/cross-context-degradation-20260604.md`):
+
+| 上下文 | ctx-only macro F1 | Δ vs 30s | R4 推算真分 |
+|---|---|---|---|
+| 30s | 0.5797 | base | 0.7458 |
+| 20s | 0.5617 | -0.018 | ~0.737 |
+| 10s | 0.5505 | -0.029 | ~0.731 |
+| 5s | 0.5355 | -0.044 | ~0.724 |
+| 2s | 0.5047 | -0.075 | ~0.708 |
+| 1s | 0.4945 | -0.085 | ~0.703 |
+
+**含义**: 测试集 2 (0, 30]s 均匀分布估真分 = **0.72-0.74**, 远好于事前估的 0.60-0.70. 主要因 ctx 滚动窗特征 (10/25/50/100/200 chunk) 在短上下文仍有信号 + SSL_ms LoRA 不直接吃 context.
+
+## 6/5 5 push 候选 (已就位)
+
+主推: 留 1 个验 R4 截短 (T1 公榜验证), 其余 4 个继续冲分
+
+| Push | 候选 | 路径 | 期望 |
+|---|---|---|---|
+| **P1 (复赛验证)** | R4_keep125_ctx10s | `submission/truncated-validation-20260604/R4_keep125_ctx10s/` | 0.728-0.735 (验 T3 推算) |
+| P2 | S1 R4+w2v2_ms 0.03 (三 SSL_ms 微叠) | `submission/probe-day7-20260604-1005/S1_R4+w2v2_ms_003/` | 0.747-0.750 冲第 2 |
+| P3 | S5 R4+omni3b_ms2 0.05 (R4+LLM 合规) | 同上 S5/ | 0.745-0.752 |
+| P4 | S2 NSOTA07+e2v_ms 0.04+hub_ms 0.04 双源升权 | 同上 S2/ | 0.745-0.748 |
+| P5 | S4 NSOTA+wsp_ms 0.10 (wsp_ms 右探) | 同上 S4/ | 0.737-0.740 |
+
+或者全部 5 个都用 truncated-validation 探索 R4 在 5s/10s/20s 上下文真分曲线 (答辩金料更厚) — 看 6/5 决定。
+
+## 复赛镜像 5 候选 (`submission/finals-20260604/`, 真分全到齐)
+
+```
+0.7458  R4_NSOTA+e2v_ms_003+hub_ms_003     🏆 ★★ NEW SOTA / 复赛镜像首推
+0.7389  R5_NEW_SOTA_NSOTA+wsp_ms_007       🟢 复赛主力 备份#2
+0.7374  R6_NSOTA+e2v_ms_003_ultralow       🟡 R4 同源对照
+0.7362  R3_SOTA+wsb_010_no_wsp_ms          🟡 0 wsp_ms 极端友好版
+0.7338  R1_NSOTA+e2v_ms_005_stable         🟢 跨切片最稳 安全网
 ```
 
-**N1' 决策门 (D-13 校准)**:
-- 单源 cap1 macro ≥ hubert head baseline 0.6239 + 0.005 = **0.6289** → 进 orthofuse 重做评估
-- orthofuse 替换 hubert/whisper 后 cap1 macro ≥ SOTA 0.6410 + 0.005 = **0.6460** → push
-- 任一不达 → SKIP, 转 N3 或接受 0.71529
+5 个**全部 8B 合规** (~1.5-1.7B), 跨切片 range 0.058-0.061 (R1 最稳). **不要再 push 它们** (真分已锁).
 
-**如果用户决定不开云机**:
-- 转复赛镜像准备 (task #6) — 复赛 Docker 草稿 + 推理 pipeline + 6/10 报备邮件
-- D-13 失效, 回 D-12 接受 0.71529 + 寄希望其他队不动 (排名 37 → 实际进前 40 概率 80%+)
+## 排行榜实时 (2026-06-04)
 
-## Push 门 (D-13 校准)
+| 排 | 真分 | 队 | 距 R4 |
+|---|---|---|---|
+| 1 | 0.75471 | — | -0.009 |
+| 2 | 0.747489 | — | -0.0017 |
+| 3 | 0.74603 | — | -0.0002 |
+| **4** | **0.7458** | **我们 R4** | base |
+| 5+ | < 0.74 | ... | + |
 
-- cap1 vs 线上 noise floor ≈ 0.003 (D-9 实测)
-- **要 push 必须 cap1 macro ≥ 0.6460** (= SOTA cap1 0.6410 + 0.005)
-- 要破前 20 cap1 ≈ ≥ 0.66 (+0.025 vs SOTA cap1)
-- 低于则 SKIP-advance, 不浪费配额
+## 决赛答辩素材桶 (`docs/finals/`)
 
-## 铁律保留 (D-1~D-14 红旗全生效)
+6/4 建桶, 7/16 决赛阶段一前持续积累. 不预先做完整 PPT.
 
-- ❌ 不再"加第 N 源" (D-1/D-8/D-10)
-- ❌ 不再"在 cap1 369 上选 strat" (D-3/D-9/D-11)
-- ❌ 不再"context 内同源算法集成" (D-5)
-- ❌ 不再"OOF 校准头无新源" (D-14 — 本次新增)
-- ✅ 唯一允许 cap1→线上转化 = **多源融合在 T (150 正例) / I (60 正例) 中等样本类的真实信号叠加**
+- `README.md` — 6 桶说明
+- `INNOVATION-CANDIDATES.md` — C1-C5 候选 (软加范式 / 双 SSL 协同 / orthofuse / climb 工具链 / cap1 红旗自省)
+- `DECISIONS-HIGHLIGHTS.md` — D-1~D-26 摘可讲版
+- `EXPERIMENT-EVIDENCE.md` — 25 push 账本 + T3 cross-context 表 + R4 截短验证 csv
+- `quotes/` — 用户金句 + 自反思
+- `charts/` — T3 cross-context 表 (已落)
+- `deep-dives/` — DD-1~DD-7 题目
+- **`FINAL-PUSH-TASKS.md`** — 初赛剩余 13 天任务清单 T1-T5
 
-## 真分账本（5 个 push 全表，跟上次同）
+## 下次 session 第一步
 
-| run_id | strat | cap1 | 真分 | Δ vs SOTA | 备注 |
-|---|---|---|---|---|---|
-| variant-F-20260528-0559 | 5seed LGBM stride5 | 0.6402 | 0.71242 | base | 旧 SOTA |
-| **orthofuse-20260531-0319** | **双源 ctx+whisper (T=w70, I=whisper)** | **0.6410** | **0.71529** | **+0.003** | **★真 SOTA, 排行榜 37** |
-| orthofuse-s5-20260531-0627 | 双源 stride5 强基座 | 0.6455 | 0.71233 | -0.003 | 强基座反不如 |
-| orthofuse-3src-20260531-0813 | 三源 ctx+whisper+hubert | 0.6540 | 0.71523 | +0.0 | noise floor 同 SOTA |
-| cycle18-mlpbc-20260531-1244 | BC 改 mlp+whisper_70 | 0.6756 (cap1) | 0.69358 | -0.022 ❌ | D-11 BC cap1 cherry-pick 实证 |
+```bash
+# 1. resume
+/project-state resume
 
-完整 15 push 账本 + HOT 产物路径 → `docs/status/2026-06-01-experiment-inventory.md`
+# 2. 拿 6/5 push 真分 (用户提供, 必含 R4_keep125 if push 了)
+# 3. 跑 calibration_push_results.py 校准
+# 4. T1 公榜验证若回 → 写答辩 slide 草稿 (charts/r4-truncated-real-score.md)
+# 5. T4 docker prototype 起手 (6/5-6/6 一天)
+# 6. 6/8 前发 T5 报备邮件
+```
 
-## 关键资产（磁盘验证）
+## Open Questions (待用户确认)
 
-| 路径 | 内容 | 用途 |
-|---|---|---|
-| `submission/code-20260601.zip` | **初赛代码评审包**（42KB） | 6/17 提交用 |
-| `tools/runs/climb/orthofuse-20260531-0319/{pred_test1.csv,fused_probs.npz}` | **真 SOTA 0.71529** | base |
-| `tools/runs/climb/whisper-fusion-20260531-0143/probs.npz` | whisper OOF 179867+test (stride40) | N1' 比对 base |
-| `tools/runs/climb/_stack_cache_s40.npz` | 4 ctx base OOF/test 缓存 (36M) | orthofuse 重做用 |
-| **`tools/runs/climb/b3d-calib-20260601-1008/probs.npz`** | **B3d OOF +0.031 真训练增益但 cap1=SOTA** | 教训证据 |
-| **`tools/runs/climb/ctx-v3-20260601-1055/{oof.npz,cv_metrics.json}`** | **B1 v3 实测 OOF/cap1 ≈ v1** | D-12 验证证据 |
-| **`cloud/train_head_n1.py`** | **N1' 云上 DB-Loss+SupCon 实现** (派生 train_head_hubert.py) | 待 rsync |
-| 云端 `/root/autodl-fs/backups/whisper_cache_full/` | 64G whisper stride5 帧 | N1' base |
-| 云端 `/root/autodl-fs/hubert_cache/` | 11G hubert stride40 帧 | N1' 替代 base |
-
-## 关键文档 (resume 后必读)
-
-1. **`DECISIONS.md` D-13 + D-14** (战略激活 + B3d 教训)
-2. **`2026-06-01-top20-attack-plan.md`** (作战图)
-3. **`2026-06-01-knowledge-layer-findings.md`** (B4 报告, N1/N2/N3 候选)
-4. **`2026-06-01-b1-eda-v3-features.json`** (B1 EDA, 47 候选特征)
-5. **`2026-06-01-experiment-inventory.md`** (完整盘点)
-
-## Open Questions（下次 session 优先确认）
-
-1. **开云机做 N1' 吗?** — 已写 `cloud/train_head_n1.py` 待 rsync. ETA 20-30min GPU + 30min rsync/setup. 期望 cap1 0.65-0.66 (whisper head 0.6521 + DB-Loss+SupCon 改造). 失败代价 ~1h GPU 钱 + 0 提交配额. **强烈建议开**.
-2. **6/10 报备邮件什么时候起草?** — 硬截止 9 天, 用户对外邮箱 `531045572@qq.com`. 可以并行 N1' 等待时写.
-3. **N1' 失败后下一步?** — 选项 A: 转 N3 (韵律 token + Qwen2.5-7B LoRA, 6-10h 云上重投入) B: 接受 0.71529, 转复赛镜像准备.
+1. **6/5 5 push 是否留 1 个给 R4_keep125 截短验证?**
+   - 利: 真分回来 = 答辩金 slide + T1/T3 实证
+   - 弊: 少 1 个公榜冲分 push (但边际递减, 不太亏)
+2. **T2 train 变长重训是否需要做?**
+   - 看 R4_keep125 真分: 若跌 < 0.02 → T2 可跳过
+   - 若跌 > 0.03 → T2 必须做 (6-8h 训练)
+3. **6/10 报备清单是否包含 Qwen3-0.6B/1.7B?**
+   - 严格按白名单只有 Qwen3-0.8B, 我们用 Qwen3-0.6B/1.7B 是边缘
+   - 安全做法: 主动报备 (草稿在 submission-strategy.md)
 
 ## Ready-to-paste commands
 
 ```bash
-# 1. 开云机后 rsync N1
-rsync -avz -e "ssh -p 46379" cloud/train_head_n1.py \
-  root@connect.westd.seetacloud.com:/root/audio-classifier/cloud/
+# 看 T3 完整数据
+cat docs/finals/charts/cross-context-degradation-20260604.md
 
-# 2. 云端启动 N1' (hubert cache 测先)
-ssh -p 46379 root@connect.westd.seetacloud.com "cd /root/audio-classifier && \
-  HCACHE=/root/autodl-fs/hubert_cache OMP_NUM_THREADS=4 \
-  setsid nohup python cloud/train_head_n1.py \
-    --epochs 15 --alpha 0.3 \
-    --run-dir tools/runs/climb/n1-hubert-dbloss-\$(date +%Y%m%d-%H%M) \
-    </dev/null >/root/n1.log 2>&1 &"
+# 重生成 R4 截短 csv (其他挡, 如 250 chunk = 20s)
+OMP_NUM_THREADS=4 python3 tools/climb/build_truncated_r4.py --keep 250
 
-# 3. N1 heartbeat (5min 间隔)
-ssh -p 46379 root@connect.westd.seetacloud.com "tail -5 /root/n1.log; nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader"
+# 跑 T3 cross-context 实测 (扩大样本)
+OMP_NUM_THREADS=4 python3 tools/climb/eval_dynamic_ctx.py
 
-# 4. N1 完成 rsync probs.npz 回本机
-rsync -avz -e "ssh -p 46379" root@connect.westd.seetacloud.com:/root/audio-classifier/tools/runs/climb/n1-hubert-dbloss-*/ \
-  tools/runs/climb/
-
-# 5. 本机 orthofuse 重做 (N1' probs 加进去看 per-class)
-python tools/climb/cycle_orthofuse.py --whisper-npz tools/runs/climb/n1-hubert-dbloss-*/probs.npz --submit
-
-# 6. climb 状态查看
-cat docs/status/climb/research-tree.md
-cat docs/status/climb/session-state.json | python3 -m json.tool
+# 看 R4 vs 截短 R4 的 pos 对比
+for d in submission/truncated-validation-20260604/*/; do
+  echo "=== $d ==="
+  python3 -c "import pandas as pd; df=pd.read_csv('$d/pred_test1.csv'); print({c:int(df[c].sum()) for c in ['c','na','i','bc','t']})"
+done
 ```
-
-## 提交配额状态
-
-- 5/31 已用 3 (orthofuse-s5 / 3src / cycle18-mlpbc)
-- **6/1 D-13 第一日 = 0 提交配额损耗** (本机攻坚 cap1 自动 SKIP)
-- 配额 5/天, 初赛阶段一持续到 6/16, **剩余配额预算 4-5 次**
-- N1' 若 push 后, 还剩 3-4 次缓冲
-
-## Pending commits
-
-需要 commit:
-- `cloud/train_head_n1.py` (N1' 实现, 待 rsync)
-- `tools/climb/cycle_context_v3.py` (B1 v3 SKIP 留存)
-- `docs/status/{JOURNAL,RESUME-NEXT-SESSION}.md` (本次 handoff 更新)
-
-`docs/赛题要求.md` modified 是用户私有 — 铁律不动。
-
-## D-13 失效条件
-
-三轨本机已全 SKIP。**若 N1' 也 SKIP** → D-13 失效, 回 D-12 接受 0.71529 + 寄希望其他队不动。但 N3 (韵律 token Qwen2.5) 还是个候选, 用户决策是否值得 6-10h 投入。

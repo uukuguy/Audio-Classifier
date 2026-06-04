@@ -25,3 +25,8 @@ tmp/
 
 catboost_info/
 submission/
+# 例外: 复赛镜像主力 + R4 截短公榜验证 (deliverables, 必须 tracked)
+!submission/finals-20260604/
+!submission/finals-20260604/**
+!submission/truncated-validation-20260604/
+!submission/truncated-validation-20260604/**

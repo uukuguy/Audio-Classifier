@@ -18,6 +18,13 @@
 | `2026-05-30-candidate-models-fusion.md` | **候选模型+融合方案(后面做)**：VAP-HuBERT/MMS仓库自带零成本/双encoder集成/LGBM动作3鲁棒化/LGBM基座只换BC列 | 🔴 superseded(D-1/D-8 否) |
 | `2026-06-01-experiment-inventory.md` | **★ 6/1 实验全盘点**：15 个 push 真分账本 + HOT 产物路径 + D-1~D-12 决策摘要 + 遗留任务 IV.A-D | 🟡 decision-history |
 | `2026-06-01-top20-attack-plan.md` | **🚨 前 20 攻坚作战图**：D-13 激活，三轨并行（B4 Knowledge Layer / B3 后处理 / B1 ctx v3）+ push 门 cap1≥0.6460 + milestone | 🟢 active |
+| `2026-06-04-submission-strategy.md` | **★ 25 push 真分账本 + 跨切片稳定性 + 6/5-6/16 节奏 + 复赛镜像 R1-R5 合规组合** | 🟢 active |
+| `2026-06-01-midgame-review-CONTEXT.md` | **🔍 中场复盘评审输入包**：3 路 AI (Gemini/Opencode/Claude self) 统一输入, 含 SOTA 主路径 + 8 push 摘要 + D-1~D-14 决策 + 4 题套餐 | 🟢 active |
+| `2026-06-01-midgame-review-gemini.md` | Gemini CLI 评审 (46 行): Isotonic+Transformer head+多源 fusion+Pseudo-labeling | 🟡 decision-history |
+| `2026-06-01-midgame-review-opencode.md` | Opencode (DeepSeek-V4-Pro) 评审 (151 行): Qwen3-0.6B 文本头 + N1' 并行 + Omni-7B probe | 🟡 decision-history |
+| `2026-06-01-midgame-review-claude.md` | Claude self 评审 (160 行, 7 arxiv 文献): N1+ LoRA Qwen3 + Wang ICASSP 范式 + 5 项目盲点 | 🟡 decision-history |
+| `2026-06-01-midgame-review-SYNTHESIS.md` | **★ 三路汇总 + D-15 建议**: 撤 N1' 启 N1+ + 阈值 sweep, 永久关 VAP/B1 v4/N1' | 🟡 decision-history（D-22 后部分撤） |
+| `../plans/2026-06-02-omni-lora-RESEARCH.md` | **Omni-7B Thinker LoRA research**: Context7+WebFetch 双源, Thinker only/hidden_size=3584/q_proj v_proj/mask-aware mean pool | 🟡 decision-history（D-20 单源证伪, D-22 软加翻转） |
 
 ## 跨会话记忆（MEMORY，恢复入口）
 
@@ -51,6 +58,21 @@
 | `climb/{calibration,runs.csv,pending-lb,session-target,adjudicator-log}` | climb 状态机（tracked，cycle.sh 写 + regen 读） | 📦 storage |
 | `../../tools/climb/*.sh` + `hooks/post-commit` | adapter 脚本 + 确定性同步兜底 hook（fresh clone 重装，见 CLAUDE.md） | tracked |
 | `../../tools/climb/cycle_*.py` | 9 cycle 实现 + regen-tree（2026-05-30 加 in-flight 段 + 去 datetime 确定性） | tracked |
+
+## 决赛答辩材料 (finals, 持续积累)
+
+> 6/4 建桶, 不预先做完整 PPT. 日常开发顺手塞素材, 7/16 决赛阶段一开始时综合.
+
+| 路径 | 是什么 |
+|---|---|
+| `../finals/README.md` | 6 个素材桶说明 + 时间节点 |
+| `../finals/FINAL-PUSH-TASKS.md` | **★ 初赛剩余时间 6/4-6/16 任务清单 (T1-T5 含动态时长适配 + 复赛 docker + 报备邮件)** |
+| `../finals/INNOVATION-CANDIDATES.md` | 创新点候选 (C1-C5 已盘点) |
+| `../finals/DECISIONS-HIGHLIGHTS.md` | 决策素材高亮 (D-1~D-25 摘可讲版) |
+| `../finals/EXPERIMENT-EVIDENCE.md` | 真分账本 + 跨切片数据 + 可视化候选 |
+| `../finals/quotes/` | 金句反思 (session 摘要 + 用户洞察) |
+| `../finals/charts/` | 可视化素材 (mermaid + matplotlib + 架构图) |
+| `../finals/deep-dives/` | 深度技术 (DD-1~DD-7 题目, 评委追问 backup) |
 
 ## External anchors
 

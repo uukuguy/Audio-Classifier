@@ -1,0 +1,24 @@
+{
+  "name": "R4_keep125_ctx10s",
+  "keep_chunks": 125,
+  "keep_seconds": 10.0,
+  "description": "R4 NSOTA_07 + e2v_ms 0.03 + hub_ms 0.03, 上下文截短到末 125 chunk (10.0s)",
+  "pos": {
+    "c": 920,
+    "na": 996,
+    "i": 49,
+    "bc": 10,
+    "t": 527
+  },
+  "reference_full_r4": {
+    "true_score": 0.745798,
+    "pos": {
+      "c": 975,
+      "na": 947,
+      "i": 80,
+      "bc": 20,
+      "t": 523
+    }
+  },
+  "note": "T1 公榜验证 D-26 复赛动态时长. wsp/hub/wsp_ms/e2v_ms/hub_ms test probs 不变 (audio 模型), 仅 ctx_te 截短重推."
+}
