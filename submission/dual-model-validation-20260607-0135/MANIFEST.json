@@ -1,0 +1,50 @@
+{
+  "_note": "D-28 dual-model 公榜验证. V1 sanity (全 30s), V2 real (一半截到 10s).",
+  "_created": "2026-06-07T01:35:22",
+  "ckpt_dir": "models/ctx_only",
+  "ckpt_dir_short": "models/ctx_only_mask050",
+  "ctx_route_threshold_chunks": 250,
+  "fallback_to_long": false,
+  "variants": {
+    "V1": {
+      "_role": "V1 sanity: 全 30s ctx 喂 dual-ckpt, 应全走 long route, 真分 = baseline 0.7458",
+      "_expected_route": {
+        "long": 1000,
+        "short": 0
+      },
+      "_expected_score": "0.7458 ± 0.001 (= baseline single ckpt)",
+      "stats": {
+        "pos": {
+          "c": 974,
+          "na": 951,
+          "i": 67,
+          "bc": 30,
+          "t": 502
+        },
+        "route": {
+          "long": 1000,
+          "short": 0
+        }
+      }
+    },
+    "V2": {
+      "_role": "V2 real: 一半截 10s 一半保 30s, 模拟测试集 2 混合分布",
+      "_truncate_strategy": "seg_id mod 2 == 0 → 截末 125 chunk (10s), else 保 375",
+      "_expected_route": "long=500 (≥250) + short=500 (<250) at θ=250",
+      "_expected_score": "0.730-0.745 (设计估算), 跟单 ckpt 对照看路由实际改善",
+      "stats": {
+        "pos": {
+          "c": 980,
+          "na": 976,
+          "i": 56,
+          "bc": 21,
+          "t": 507
+        },
+        "route": {
+          "long": 500,
+          "short": 500
+        }
+      }
+    }
+  }
+}

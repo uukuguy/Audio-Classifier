@@ -1,13 +1,14 @@
 # Next-Session Handoff
 
-**Updated:** 2026-06-06 11:28 (D-28 sprint 1 完成: dual-model 工程链全就绪 + T5 草稿就绪 + 队名锁 SpeechlessAI)
+**Updated:** 2026-06-06 11:50 (sprint 1 完成 + DECISIONS 同步修正 + 流程教训记一笔)
 **恢复命令:** `/project-state resume`
 
-## TL;DR (3 句)
+## TL;DR (4 句)
 
 1. **🏆 6/6 公榜实位 (用户 10:18 校准)**: #1 明天会更好 0.754713 / **#2 我们 P5 SpeechlessAI alt-id 0.747569 (8B 超额不进复赛)** / #3 YanHui 0.747489 / **合规 S5 0.747131 第 3 距 #1 +0.0076 (R4 软加单次量级内)**. 9 个 push 真分回完, 复赛镜像配方锁定 = S5; R4 内**双 SSL_ms 0.03+0.03 必保** (+0.007 核心), **Omni3B 0.05 是峰**, Omni-7B vs 3B 仅 +0.0004 (选 3B 几乎 free lunch).
 2. **⚠ T2 mask 训实验大教训**: 本机 sweep 选出 mask=0.4 "最优", 公榜实际跌 -0.021 = sweep 与公榜全栈在 30s 上**完全反向**. 根因: ① 单源 ctx-only ≠ R4 全栈 softadd 放大; ② sweep 评估通 ≠ 公榜测试通分布. **本机评估只能定性, 选超参必须公榜验证**.
-3. **D-28 sprint 1 完成 (6/6 11:28 commit 84b56bf)**: dual-model fallback 工程链全就绪. C (src/infer.py 双 ckpt 路由, 6 单测 + 端到端回归 binary identical) + E (build_dual_model_validation.py V1/V2 工具, fallback 验证通过) + B (train_mask050_ckpt.sh 训练脚本就绪) + T5 报备邮件草稿就绪 (队名 SpeechlessAI). **下次 session 唯一阻塞 = 用户启 mask050 训练 (5-8h 本机 / 1-2h 云端)**, 训完一键出真 V1/V2 push.
+3. **D-28 sprint 1 完成 (6/6 11:28 commit 84b56bf, DECISIONS 同步 24625c3)**: dual-model fallback 工程链全就绪. C (src/infer.py 双 ckpt 路由, 6 单测 + 端到端回归 binary identical) + E (build_dual_model_validation.py V1/V2 工具, fallback 验证通过) + B (train_mask050_ckpt.sh 训练脚本就绪) + T5 报备邮件草稿就绪 (队名 SpeechlessAI). **路由阈值锁定 θ=20s (策略 A 保守, D-28 注解)**. **下次 session 唯一阻塞 = 用户启 mask050 训练 (5-8h 本机 / 1-2h 云端)**, 训完一键出真 V1/V2 push.
+4. **流程教训 (24625c3 修正)**: 11:30 commit 499d602 的 Edit 因没先 Read DECISIONS 而失败, 但 commit msg 已宣称改了 = 短暂双重状态 (commit msg ≠ diff). 靠 post-commit hook 二次警告救回, 24625c3 真改 DECISIONS 闭环. **教训**: Edit 报 tool_use_error 立即修, 不带 bug 走下一 commit; post-commit hook 警告是兜底信号不能忽略.
 
 ## 6/6 全部 9 push 真分账本
 
@@ -27,20 +28,21 @@
 | R4 baseline 10s anchor | 0.721787 | -0.024 | — |
 | R4 baseline 5s anchor | 0.707016 | -0.039 | — |
 
-## 6/6 T4 docker 骨架完成 (ctx-only)
+## 6/6 T4 docker 骨架完成 (ctx-only) — 全 committed (75799ad)
 
-**已落盘** (`git status` 未 commit):
+**已落盘 commit**:
 - `Dockerfile` + `.dockerignore` + `requirements.docker.txt` (linux/amd64, python:3.12-slim, 390MB)
-- `src/__init__.py` + `src/infer.py` (单入口 --ckpt_dir --test_root --output_csv --ctx_mode)
+- `src/__init__.py` + `src/infer.py` (双 ckpt 路由 + LF 行尾, sprint 1 升级 84b56bf)
 - `models/ctx_only/` (5 LGBM ckpt + thresholds.json + feature_spec.json, ~5.3MB)
 - `tools/__init__.py` + `tools/climb/__init__.py`
 - `tools/climb/cycle_context.py` (改造: build_train 加 mask_prob 参数 + ckpt dump)
-- `tools/climb/build_day8_candidates.py` + `build_r4_mask_truncated.py` + `eval_mask_sweep.py`
+- `tools/climb/{build_day8_candidates, build_r4_mask_truncated, eval_mask_sweep, build_dual_model_validation, train_mask050_ckpt.sh}.py`
 
-**验证三重通过**:
+**验证四重通过**:
 - 1000 段 docker run 出 csv = src.infer 本机 csv = cycle_context.py 原 csv 二进制相同
 - 变长入口测: 截短 125 chunk → normalize_ctx_to_375 自动 pad → pos 按预期变化
 - docker --platform linux/amd64 build 16s, 单次 run ~5s
+- **dual-ckpt 路由测**: 6 单测 + 1000 段端到端 (long/short 同 ckpt mode = single mode binary identical)
 
 ## D-28 复赛镜像决策修正 (核心交付)
 
@@ -139,10 +141,14 @@ cat submission/probe-day8-20260606-0115/MANIFEST.json | python3 -m json.tool | h
 - ❌ NSOTA07 单加 Omni3B 跳过双 SSL_ms (P4 -0.001, 双 SSL 是核心 +0.007)
 - ❌ 7B vs 3B 多模态升级 (仅 +0.0004 = 噪声)
 
-## 当前 git 工作树状态 (6/6 11:28)
+## 当前 git 工作树状态 (6/6 11:50)
 
 工作树**干净** (所有改动已 commit):
 - 75799ad: 6/6 D-28 mask 教训 + T4 docker 骨架 + 公榜排位校准 (30 文件)
 - 84b56bf: 6/6 D-28 sprint 1 dual-model 工程链就绪 + T5 队名 (8 文件)
+- 2d9e27d: 6/6 handoff sprint 1 完成态 (2 文件, RESUME + JOURNAL)
+- 499d602: D-28 注解 dual-model θ=20s 锁定 ⚠ Edit 失败漏改 DECISIONS = 短暂双重状态
+- 24625c3: **修正** 499d602 漏改 DECISIONS + T5 SpeechlessAI 队名同步 (2 文件)
+- 6a13c16: journal 11:32 补 24625c3 hash (1 文件)
 
 下次 session resume 后**无需先 commit**, 直接按"下次 session 第一步"启动 mask050 训练.

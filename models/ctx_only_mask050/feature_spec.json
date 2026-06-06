@@ -1,0 +1,36 @@
+{
+  "paradigm": "context-only",
+  "feature_dim": 46,
+  "ctx_chunks": 375,
+  "label_order": [
+    "C",
+    "T",
+    "BC",
+    "I",
+    "NA"
+  ],
+  "submit_cols": [
+    "c",
+    "na",
+    "i",
+    "bc",
+    "t"
+  ],
+  "col_to_labelid": {
+    "c": 0,
+    "na": 4,
+    "i": 3,
+    "bc": 2,
+    "t": 1
+  },
+  "featurize_fn": "tools.climb.cycle_context.featurize",
+  "ctx_mask_prob": 0.5,
+  "ctx_mask_keep_choices": [
+    50,
+    100,
+    200,
+    300,
+    375
+  ],
+  "note": "T2 变长 mask 训练 (CTX_MASK_PROB=0.5), infer 端配 normalize_ctx_to_375 适配 D-26 复赛动态时长"
+}

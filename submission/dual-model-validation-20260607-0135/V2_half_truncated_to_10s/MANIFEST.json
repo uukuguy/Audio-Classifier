@@ -1,0 +1,19 @@
+{
+  "_role": "V2 real: 一半截 10s 一半保 30s, 模拟测试集 2 混合分布",
+  "_truncate_strategy": "seg_id mod 2 == 0 → 截末 125 chunk (10s), else 保 375",
+  "_expected_route": "long=500 (≥250) + short=500 (<250) at θ=250",
+  "_expected_score": "0.730-0.745 (设计估算), 跟单 ckpt 对照看路由实际改善",
+  "stats": {
+    "pos": {
+      "c": 980,
+      "na": 976,
+      "i": 56,
+      "bc": 21,
+      "t": 507
+    },
+    "route": {
+      "long": 500,
+      "short": 500
+    }
+  }
+}

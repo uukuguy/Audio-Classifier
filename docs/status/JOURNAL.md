@@ -543,3 +543,11 @@
 - 11:28 commit dual-model sprint 1 完整链 (C+E+B 工程就绪 + T5 草稿 + 队名 SpeechlessAI) [84b56bf]
 - 11:30 RESUME handoff 刷 sprint 1 完成态 + journal 11:28 commit hash 补齐 [2d9e27d]
 - 11:32 修正: 前一 commit 499d602 漏改 DECISIONS.md (Edit 因没先 Read 而失败但 commit msg 已宣称改了 = 双重状态). 本次真改 D-28 注解 θ=20s 锁定 + T5 队名 SpeechlessAI [24625c3]
+
+## 2026-06-07
+
+- 01:17 day9 push-1 落盘: A=S5+omni7b 0.03 (8.7B) + B=S5+qwen17b 0.03 (4.7B). build_day9 第一版 make_sota_3src 列序写错被 S5 sanity 抓到, 固化 sanity 断言. 押风险博 #1 (距 S5 +0.0076)
+- 01:25 day9 A/B 真分回完, 全 falsified: A=0.746166 (-0.001 噪声内) / B=0.741489 (-0.0056). **S5 是当前素材局部峰**: 在 S5 上软加任何新 src 都跌 (wsp/e2v/omni7b 0.03 or 0.05/qwen17b) → 单源软加叠加路线终结
+- 01:30 启 mask050 ctx-LGBM ckpt 训练 (本机 OMP=4 nohup pid 93993)
+- 01:33 mask050 训练完成 (仅 3 分钟, 远低于 RESUME 估的 5-8h): OOF=0.5901 ckpt 完整 7 文件 → models/ctx_only_mask050/
+- 01:35 V1/V2 dual-model 验证 csv 落盘 → submission/dual-model-validation-20260607-0135/. V1 sanity LF-binary 等同 single-ckpt baseline csv (CRLF 归一化后) → 路由实现不破 baseline ✓. V2 (一半 10s 一半 30s) pos c=980/na=976/i=56/bc=21/t=507

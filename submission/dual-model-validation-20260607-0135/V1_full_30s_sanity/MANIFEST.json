@@ -1,0 +1,21 @@
+{
+  "_role": "V1 sanity: 全 30s ctx 喂 dual-ckpt, 应全走 long route, 真分 = baseline 0.7458",
+  "_expected_route": {
+    "long": 1000,
+    "short": 0
+  },
+  "_expected_score": "0.7458 ± 0.001 (= baseline single ckpt)",
+  "stats": {
+    "pos": {
+      "c": 974,
+      "na": 951,
+      "i": 67,
+      "bc": 30,
+      "t": 502
+    },
+    "route": {
+      "long": 1000,
+      "short": 0
+    }
+  }
+}
