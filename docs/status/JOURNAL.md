@@ -541,3 +541,4 @@
 - 11:23 ★ B 任务: tools/climb/train_mask050_ckpt.sh 落盘 (CTX_MASK_PROB=0.5, OMP=4 限线程, dump 到 models/ctx_only_mask050/). 用户点头跑 → 本机 5-8h 或云端 4090 1-2h. 等 ckpt 训完一键跑 build_dual_model_validation 出真 V1/V2
 - 11:26 .gitignore 加白名单 !submission/dual-model-validation-*/ (V1/V2 跑出后入仓 deliverable, 跟 truncated-validation 同类)
 - 11:28 commit dual-model sprint 1 完整链 (C+E+B 工程就绪 + T5 草稿 + 队名 SpeechlessAI) [84b56bf]
+- 11:30 RESUME handoff 刷 sprint 1 完成态 + DECISIONS D-28 注解 θ=20s 锁定 (策略 A 保守) [2d9e27d + 待补]
