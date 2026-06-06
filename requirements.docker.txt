@@ -1,0 +1,6 @@
+# FinVCup 复赛镜像最小依赖 (ctx-only 骨架, 纯 CPU 推理)
+# R4 全栈升级时加 torch/transformers/peft
+numpy==1.26.4
+scikit-learn==1.5.2
+lightgbm==4.5.0
+joblib==1.5.3

@@ -15,11 +15,13 @@ from __future__ import annotations
 
 import glob
 import json
+import os
 import random
 import sys
 from datetime import datetime
 from pathlib import Path
 
+import joblib
 import numpy as np
 from lightgbm import LGBMClassifier
 from sklearn.metrics import f1_score
@@ -51,13 +53,29 @@ def featurize(ctx: np.ndarray) -> np.ndarray:
     return np.array(feats, dtype=np.float32)
 
 
-def build_train(conv_ids, label_files):
+def build_train(conv_ids, label_files, mask_prob: float = 0.0,
+                keep_choices: tuple = (50, 100, 200, 300, 375)):
+    """构 train 窗口. 默认 baseline 不 mask.
+
+    mask_prob > 0 时, 每个窗口以概率 mask_prob 随机截短到 keep_choices 之一,
+    模拟 D-26 复赛动态时长. 截短后前段 NA pad 回 375 chunk (跟 normalize_ctx_to_375 一致).
+    实验值通过 env var 传入, 不进 baseline default (CLAUDE.md §2.6).
+    """
+    NA_LABEL = 4
+    rng = np.random.RandomState(SEED)
     X, Y = [], []
     for cid in conv_ids:
         a = np.load(label_files[cid])
         for e in range(CTX, a.shape[0] - TGT + 1, STRIDE):
             fut = set(int(x) for x in a[e:e + TGT])
-            X.append(featurize(a[e - CTX:e].astype(int)))
+            ctx_window = a[e - CTX:e].astype(int)
+            # 训练时模拟变长 (T2)
+            if mask_prob > 0 and rng.random() < mask_prob:
+                keep = int(rng.choice(keep_choices))
+                if keep < CTX:
+                    pad = np.full(CTX - keep, NA_LABEL, dtype=int)
+                    ctx_window = np.concatenate([pad, ctx_window[-keep:]])
+            X.append(featurize(ctx_window))
             Y.append([1 if k in fut else 0 for k in range(NUM)])
     return np.array(X), np.array(Y, dtype=int)
 
@@ -85,6 +103,13 @@ def main():
     run_dir = Path(sys.argv[1] if len(sys.argv) > 1 else "tools/runs/climb/_adhoc")
     run_dir.mkdir(parents=True, exist_ok=True)
 
+    # T2 实验: env var 读 mask_prob (baseline default = 0 = 不 mask, §2.6)
+    mask_prob = float(os.environ.get("CTX_MASK_PROB", "0.0"))
+    if mask_prob > 0:
+        print(f"[cycle-ctx] T2 mask 实验: CTX_MASK_PROB={mask_prob} "
+              f"(每窗 {mask_prob*100:.0f}% 概率随机截短到 {{50,100,200,300,375}} 之一)",
+              file=sys.stderr)
+
     label_files = {Path(p).stem: p for p in sorted(glob.glob("data/train/labels/*.npy"))}
     conv_ids = sorted(label_files)
     random.Random(SEED).shuffle(conv_ids)
@@ -92,9 +117,11 @@ def main():
     val_ids, train_ids = conv_ids[:n_val], conv_ids[n_val:]
     print(f"[cycle-ctx] conv: train={len(train_ids)} valid={len(val_ids)}", file=sys.stderr)
 
-    Xtr, Ytr = build_train(train_ids, label_files)
-    Xva, Yva = build_train(val_ids, label_files)
-    print(f"[cycle-ctx] windows: train={len(Xtr)} valid={len(Xva)}", file=sys.stderr)
+    Xtr, Ytr = build_train(train_ids, label_files, mask_prob=mask_prob)
+    # valid 集**不 mask** — 保持 baseline 评估口径一致 (cap1 真分关心 30s 完整 ctx)
+    Xva, Yva = build_train(val_ids, label_files, mask_prob=0.0)
+    print(f"[cycle-ctx] windows: train={len(Xtr)} valid={len(Xva)} (valid 不 mask)",
+          file=sys.stderr)
 
     # --- 1) valid 上调阈值 + 记 CV 指标（per class id 0..4） ---
     thr_by_labelid, f1_by_labelid = {}, {}
@@ -107,10 +134,36 @@ def main():
     macro_f1 = float(np.mean(list(f1_by_labelid.values())))
     print(f"[cycle-ctx] CV Macro-F1 (tuned) = {macro_f1:.4f}", file=sys.stderr)
 
-    # --- 2) 全量重训（train+valid 所有 conv）---
-    Xall, Yall = build_train(conv_ids, label_files)
-    print(f"[cycle-ctx] retrain on all: {len(Xall)} windows", file=sys.stderr)
+    # --- 2) 全量重训（train+valid 所有 conv, 同样 mask）---
+    Xall, Yall = build_train(conv_ids, label_files, mask_prob=mask_prob)
+    print(f"[cycle-ctx] retrain on all: {len(Xall)} windows (mask_prob={mask_prob})",
+          file=sys.stderr)
     final_clfs = {k: fit_lgbm(Xall, Yall[:, k]) for k in range(NUM)}
+
+    # --- 2b) dump LGBM ckpt + thresholds 供 docker infer load 用 ---
+    ckpt_dir = run_dir / "ckpt"
+    ckpt_dir.mkdir(exist_ok=True)
+    for k in range(NUM):
+        joblib.dump(final_clfs[k], ckpt_dir / f"lgbm_{LABELS[k].lower()}.joblib")
+    (ckpt_dir / "thresholds.json").write_text(json.dumps(
+        {LABELS[k].lower(): round(thr_by_labelid[k], 4) for k in range(NUM)},
+        ensure_ascii=False, indent=2,
+    ))
+    (ckpt_dir / "feature_spec.json").write_text(json.dumps({
+        "paradigm": "context-only",
+        "feature_dim": int(Xall.shape[1]),
+        "ctx_chunks": CTX,
+        "label_order": [LABELS[k] for k in range(NUM)],
+        "submit_cols": SUBMIT_COLS,
+        "col_to_labelid": COL_TO_LABELID,
+        "featurize_fn": "tools.climb.cycle_context.featurize",
+        "ctx_mask_prob": mask_prob,
+        "ctx_mask_keep_choices": [50, 100, 200, 300, 375] if mask_prob > 0 else None,
+        "note": ("baseline 训练 (mask=0)" if mask_prob == 0 else
+                 f"T2 变长 mask 训练 (CTX_MASK_PROB={mask_prob}), "
+                 "infer 端配 normalize_ctx_to_375 适配 D-26 复赛动态时长"),
+    }, ensure_ascii=False, indent=2))
+    print(f"[cycle-ctx] dumped ckpt to {ckpt_dir}/ (5 lgbm + thresholds + spec)", file=sys.stderr)
 
     # --- 3) test context 预测 ---
     test_ctx_files = sorted(glob.glob("data/test/context/*.npy"))

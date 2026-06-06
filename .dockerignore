@@ -1,0 +1,19 @@
+# 减小 build context — 不发大目录到 docker daemon
+.git/
+.claude/
+data/
+baselines/
+submission/
+tools/runs/
+docs/
+cloud/
+3th-party/
+**/__pycache__/
+**/*.pyc
+**/.DS_Store
+**/node_modules/
+**/.venv/
+**/venv/
+*.log
+.dev-phase/
+.planning/

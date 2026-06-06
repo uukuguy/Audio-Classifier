@@ -1,144 +1,160 @@
 # Next-Session Handoff
 
-**Updated:** 2026-06-04 15:00 (R4 NEW SOTA 0.7458 第 4 + D-26 复赛动态时长 + T1/T3 完成)
+**Updated:** 2026-06-06 10:25 (D-28 mask 教训 + dual-model + T4 docker 骨架 + 公榜排位校准: 总 #2 (P5 alt-id) / 合规 #3)
 **恢复命令:** `/project-state resume`
 
 ## TL;DR (3 句)
 
-1. **🏆 R4 = 0.745798 排第 4** (NSOTA_07 + e2v_ms 0.03 + hub_ms 0.03 双 SSL 协同, 8B 合规). 距第 3 (0.74603) 仅 +0.0002, 距第 2 (0.747489) +0.0017, 距第 1 (0.75471) +0.009.
-2. **⚠ D-26 复赛动态时长**: 赛题要求图 1 明写"测试集 2 上下文 (0, 30]s 任意". 全栈硬编码 30s=375 chunk 需变长适配. T1/T3 已完成实测: **截到 10s ctx 仅跌 0.029 (5%)**, R4 全栈估退化 0.01-0.02 = 真分估 0.72-0.74, 远好于事前估的 0.60-0.70.
-3. **战略转向**: 公榜冲分边际递减 (对手在动), **重心转复赛准备** + 公榜稳第 4-5. T1-T5 任务进度见 `docs/finals/FINAL-PUSH-TASKS.md`.
+1. **🏆 6/6 公榜实位 (用户 10:18 校准)**: #1 明天会更好 0.754713 / **#2 我们 P5 SpeechlessAI alt-id 0.747569 (8B 超额不进复赛)** / #3 YanHui 0.747489 / **合规 S5 0.747131 第 3 距 #1 +0.0076 (R4 软加单次量级内)**. 9 个 push 真分回完, 复赛镜像配方锁定 = S5; R4 内**双 SSL_ms 0.03+0.03 必保** (+0.007 核心), **Omni3B 0.05 是峰**, Omni-7B vs 3B 仅 +0.0004 (选 3B 几乎 free lunch).
+2. **⚠ T2 mask 训实验大教训**: 本机 sweep 选出 mask=0.4 "最优", 公榜实际跌 -0.021 = sweep 与公榜全栈在 30s 上**完全反向**. 根因: ① 单源 ctx-only ≠ R4 全栈 softadd 放大; ② sweep 评估通 ≠ 公榜测试通分布. **本机评估只能定性, 选超参必须公榜验证**.
+3. **战略转向 dual-model fallback**: 单一 mask 模型 (任何 prob) 公榜均匀都比 no-mask 差 -0.001~-0.005. dual-model (长 ctx baseline + 短 ctx mask050) 估真分 **0.7417 = +0.009**. T4 docker 骨架已完成 (ctx-only 390MB), 下一步: 实现 dual-model 路由 + S5 全栈打包.
 
-## R4 NEW SOTA 详情 (6/4 9:30 push 真分回)
+## 6/6 全部 9 push 真分账本
 
-| 候选 | 真分 | 备注 |
+| 候选 | 真分 | Δ vs SOTA | 关键信号 |
+|---|---|---|---|
+| **🏆 P5 R4 + omni7b_ms2 0.05** ⚠ 8B超 | **0.747569** | +0.0004 | 7B vs 3B 仅噪声 (答辩 free lunch) |
+| **★ S5 R4 + omni3b_ms2 0.05** (anchor) | **0.747131** | — | 6/5 NEW SOTA, 8B 合规, **复赛主力** |
+| P2 R4 + omni3b_ms2 0.10 | 0.745997 | -0.001 vs S5 | omni3b 0.05 是峰 |
+| R4 baseline 30s anchor | 0.745798 | -0.001 | — |
+| P1 S5 + wsp_ms 0.10 | 0.741037 | -0.006 vs S5 | Omni × wsp **不正交**, wsp_ms 饱和 |
+| P4 NSOTA07 + omni3b_ms2 0.05 | 0.737658 | -0.001 vs NSOTA07 | **双 SSL_ms 才是 R4 核心 +0.007** |
+| **M2 R4 mask050 10s ctx** | 0.737580 | +0.016 vs 10s no-mask | mask050 压回 80% 退化 |
+| P3 S5 + e2v_ms 0.05 | 0.736542 | -0.011 vs S5 | Omni 覆盖 e2v, R4 内 e2v 0.03 天花板 |
+| M3 R4 mask040 10s ctx | 0.732465 | +0.011 vs 10s no-mask | mask040 救场弱于 mask050 |
+| **M1 R4 mask050 30s ctx** | 0.727898 | **-0.018 vs SOTA** | mask 长 ctx 伤 |
+| **M4 R4 mask040 30s ctx** | 0.724527 | **-0.021 vs SOTA** | mask040 伤更大 (sweep 反向案例) |
+| R4 baseline 10s anchor | 0.721787 | -0.024 | — |
+| R4 baseline 5s anchor | 0.707016 | -0.039 | — |
+
+## 6/6 T4 docker 骨架完成 (ctx-only)
+
+**已落盘** (`git status` 未 commit):
+- `Dockerfile` + `.dockerignore` + `requirements.docker.txt` (linux/amd64, python:3.12-slim, 390MB)
+- `src/__init__.py` + `src/infer.py` (单入口 --ckpt_dir --test_root --output_csv --ctx_mode)
+- `models/ctx_only/` (5 LGBM ckpt + thresholds.json + feature_spec.json, ~5.3MB)
+- `tools/__init__.py` + `tools/climb/__init__.py`
+- `tools/climb/cycle_context.py` (改造: build_train 加 mask_prob 参数 + ckpt dump)
+- `tools/climb/build_day8_candidates.py` + `build_r4_mask_truncated.py` + `eval_mask_sweep.py`
+
+**验证三重通过**:
+- 1000 段 docker run 出 csv = src.infer 本机 csv = cycle_context.py 原 csv 二进制相同
+- 变长入口测: 截短 125 chunk → normalize_ctx_to_375 自动 pad → pos 按预期变化
+- docker --platform linux/amd64 build 16s, 单次 run ~5s
+
+## D-28 复赛镜像决策修正 (核心交付)
+
+| 组件 | D-27 原方案 | D-28 修正 |
 |---|---|---|
-| **R4 NSOTA_07 + e2v_ms 0.03 + hub_ms 0.03** | **0.745798** | 🏆 NEW SOTA, 8B 合规 ~1.7B 总参 |
-| R5 NSOTA_07 (wsp_ms 0.07) | 0.738899 | 6/4 早 SOTA, 单 SSL 软加 |
-| D3 Omni 5fold median + Q5 | 0.736531 | per-fold median ≈ mean (H-D22-11 否决) |
-| B_Q5+e2v_ms_w005 | 0.733773 | 单 SSL ms 0.05 软加 Q5 (反降 -0.003) |
-| B_Q5+hub_ms_w005 | 0.732356 | 同上 |
-| C_NSOTA(wsp→wsp_ms)+omni015 | 0.729264 | base 替换失败 (-0.007) |
+| 主力模型 | S5 | **S5 保持** ✓ |
+| ctx 训练 | T2 mask 重训 | ⚠ **不引入单一 mask** (均匀公榜都比 baseline 差) |
+| 短 ctx 退化 | mask + T1 归一化 | **dual-model fallback** (长用 baseline, 短用 mask050, 估真分 0.7417) |
+| 双 SSL_ms 训 60h | 必做 | **必做** ✓ |
+| Omni-3B 训 | 必做 | **必做** ✓ |
 
-**D-25 核心发现**: 单 e2v_ms 0.03 软加 NSOTA_07 真分 -0.0015 (反降), 单 hub_ms 0.03 同样估也 -0.0015, **但两者一起加 +0.0084** = R4 0.7458. **非加法的协同效应**, OOF 完全测不出 (R4 OOF -0.0021 真分 +0.0069 = 3.3x 反向).
-
-## ⚠ D-26 复赛动态时长 (我之前漏读图 1, 用户纠正)
-
-**约束**: 赛题要求图 1 原文: "测试集 2 ... 同时上下文分成动态时长, 即上下文+2s 不再固定为 30s, **在 (0, 30] 之间**"
-
-**应对进度 (T1-T5)**:
-
-| 任务 | 状态 | 完成 % |
-|---|---|---|
-| T1 推理归一化 (`normalize_ctx_to_375`) | ✅ 实现 + 单元测试通过 | 70% |
-| T1 公榜验证 R4 截短 csv | ⏳ csv 就绪 (R4_keep125/63), 等 push | 30% |
-| T2 train 变长模拟重训 | ⏳ 未启动 (T3 显示退化小, 可能不需要做) | 0% |
-| **T3 cross-context 内部对照** | ✅ **实测完成** | 100% |
-| T4 复赛 docker prototype | ⏳ 未启动 | 0% |
-| T5 报备邮件 (6/8 前发) | ⏳ 草稿就绪未发 | 0% |
-
-**T3 实测核心数据** (`docs/finals/charts/cross-context-degradation-20260604.md`):
-
-| 上下文 | ctx-only macro F1 | Δ vs 30s | R4 推算真分 |
-|---|---|---|---|
-| 30s | 0.5797 | base | 0.7458 |
-| 20s | 0.5617 | -0.018 | ~0.737 |
-| 10s | 0.5505 | -0.029 | ~0.731 |
-| 5s | 0.5355 | -0.044 | ~0.724 |
-| 2s | 0.5047 | -0.075 | ~0.708 |
-| 1s | 0.4945 | -0.085 | ~0.703 |
-
-**含义**: 测试集 2 (0, 30]s 均匀分布估真分 = **0.72-0.74**, 远好于事前估的 0.60-0.70. 主要因 ctx 滚动窗特征 (10/25/50/100/200 chunk) 在短上下文仍有信号 + SSL_ms LoRA 不直接吃 context.
-
-## 6/5 5 push 候选 (已就位)
-
-主推: 留 1 个验 R4 截短 (T1 公榜验证), 其余 4 个继续冲分
-
-| Push | 候选 | 路径 | 期望 |
-|---|---|---|---|
-| **P1 (复赛验证)** | R4_keep125_ctx10s | `submission/truncated-validation-20260604/R4_keep125_ctx10s/` | 0.728-0.735 (验 T3 推算) |
-| P2 | S1 R4+w2v2_ms 0.03 (三 SSL_ms 微叠) | `submission/probe-day7-20260604-1005/S1_R4+w2v2_ms_003/` | 0.747-0.750 冲第 2 |
-| P3 | S5 R4+omni3b_ms2 0.05 (R4+LLM 合规) | 同上 S5/ | 0.745-0.752 |
-| P4 | S2 NSOTA07+e2v_ms 0.04+hub_ms 0.04 双源升权 | 同上 S2/ | 0.745-0.748 |
-| P5 | S4 NSOTA+wsp_ms 0.10 (wsp_ms 右探) | 同上 S4/ | 0.737-0.740 |
-
-或者全部 5 个都用 truncated-validation 探索 R4 在 5s/10s/20s 上下文真分曲线 (答辩金料更厚) — 看 6/5 决定。
-
-## 复赛镜像 5 候选 (`submission/finals-20260604/`, 真分全到齐)
-
-```
-0.7458  R4_NSOTA+e2v_ms_003+hub_ms_003     🏆 ★★ NEW SOTA / 复赛镜像首推
-0.7389  R5_NEW_SOTA_NSOTA+wsp_ms_007       🟢 复赛主力 备份#2
-0.7374  R6_NSOTA+e2v_ms_003_ultralow       🟡 R4 同源对照
-0.7362  R3_SOTA+wsb_010_no_wsp_ms          🟡 0 wsp_ms 极端友好版
-0.7338  R1_NSOTA+e2v_ms_005_stable         🟢 跨切片最稳 安全网
-```
-
-5 个**全部 8B 合规** (~1.5-1.7B), 跨切片 range 0.058-0.061 (R1 最稳). **不要再 push 它们** (真分已锁).
-
-## 排行榜实时 (2026-06-04)
-
-| 排 | 真分 | 队 | 距 R4 |
-|---|---|---|---|
-| 1 | 0.75471 | — | -0.009 |
-| 2 | 0.747489 | — | -0.0017 |
-| 3 | 0.74603 | — | -0.0002 |
-| **4** | **0.7458** | **我们 R4** | base |
-| 5+ | < 0.74 | ... | + |
-
-## 决赛答辩素材桶 (`docs/finals/`)
-
-6/4 建桶, 7/16 决赛阶段一前持续积累. 不预先做完整 PPT.
-
-- `README.md` — 6 桶说明
-- `INNOVATION-CANDIDATES.md` — C1-C5 候选 (软加范式 / 双 SSL 协同 / orthofuse / climb 工具链 / cap1 红旗自省)
-- `DECISIONS-HIGHLIGHTS.md` — D-1~D-26 摘可讲版
-- `EXPERIMENT-EVIDENCE.md` — 25 push 账本 + T3 cross-context 表 + R4 截短验证 csv
-- `quotes/` — 用户金句 + 自反思
-- `charts/` — T3 cross-context 表 (已落)
-- `deep-dives/` — DD-1~DD-7 题目
-- **`FINAL-PUSH-TASKS.md`** — 初赛剩余 13 天任务清单 T1-T5
-
-## 下次 session 第一步
+## 下次 session 第一步 (优先级排序)
 
 ```bash
 # 1. resume
 /project-state resume
 
-# 2. 拿 6/5 push 真分 (用户提供, 必含 R4_keep125 if push 了)
-# 3. 跑 calibration_push_results.py 校准
-# 4. T1 公榜验证若回 → 写答辩 slide 草稿 (charts/r4-truncated-real-score.md)
-# 5. T4 docker prototype 起手 (6/5-6/6 一天)
-# 6. 6/8 前发 T5 报备邮件
+# 2. 决定先做哪个 (用户点头):
+#    ① T5 报备邮件 (6/8 截止, 30 分钟)
+#    ② dual-model fallback 设计实现 (改 src/infer.py 加 ctx 长度路由, 阈值 15s/20s 待定)
+#    ③ A3 R4 全栈 docker 升级 (S5 配方 ckpt 打包 + softadd 融合 + dual 路由)
+#    ④ 答辩素材落 finals/ (sweep 矩阵 + 公榜反向 = "评估错配"金料 + 7B vs 3B 对照)
+#    ⑤ 今天 6/7 1-2 push (按 D-27 节奏, 不冲分只拿信息)
+
+# 3. commit 当前 git 工作树 (大量未 commit: src/ + Dockerfile + models/ + 4 个新脚本 + 4 个 truncated csv + DECISIONS D-28 + JOURNAL + RESUME)
+git add -A
+git commit -m "6/6: D-28 mask sweep 教训 + T4 docker 骨架 + 9 push 真分 + dual-model 战略"
 ```
 
 ## Open Questions (待用户确认)
 
-1. **6/5 5 push 是否留 1 个给 R4_keep125 截短验证?**
-   - 利: 真分回来 = 答辩金 slide + T1/T3 实证
-   - 弊: 少 1 个公榜冲分 push (但边际递减, 不太亏)
-2. **T2 train 变长重训是否需要做?**
-   - 看 R4_keep125 真分: 若跌 < 0.02 → T2 可跳过
-   - 若跌 > 0.03 → T2 必须做 (6-8h 训练)
-3. **6/10 报备清单是否包含 Qwen3-0.6B/1.7B?**
-   - 严格按白名单只有 Qwen3-0.8B, 我们用 Qwen3-0.6B/1.7B 是边缘
-   - 安全做法: 主动报备 (草稿在 submission-strategy.md)
+1. **6/7 今天投多少 push?** 按 D-27 = 1-2 push/天拿信息. 公榜校准后: 距 #1 +0.0076 在 R4 软加单次提升量级内 (D-22 +0.011, D-25 +0.007), 冲 #1 不再"必输的赌"; 但 YanHui (#3) 距合规 S5 仅 -0.00036, 一次失败 -0.001 就掉 #4
+   - 选项 A: 0 push 今天, 全转 docker / dual-model 实现
+   - 选项 B: 1 push, 投 dual-model 模拟 csv (验证 dual 策略真分 ≈ 0.74+)
+   - 选项 C: 2 push, 加投复赛镜像答辩素材 csv
+   - 选项 D: 1 push 冲 #1 (S5 + perfold 多样性 / 新软加组合), 同时备 dual-model docker
+
+2. **dual-model 路由阈值定多少?** mask050 sweep 显示 15s/20s 都是边界点
+   - 选项 A: ≥ 20s 用 baseline, < 20s 用 mask050 (保守)
+   - 选项 B: ≥ 15s 用 baseline, < 15s 用 mask050 (激进, 更多场景用 baseline 保 SOTA)
+   - 推荐: B (先粗后细, mask050 实测真分曲线还不全)
+
+3. **是否补 mask030 + mask020 公榜验证?** mask040/050 已知, 但**未知 mask 系列的真实公榜峰值**
+   - 选项 A: 不补 — 单一 mask 都比 baseline 差, ROI 低
+   - 选项 B: 补 mask030 30s + 10s 1 push (找窄峰)
+   - 推荐: A (按 D-28 教训, 单一 mask 路线已废)
 
 ## Ready-to-paste commands
 
 ```bash
-# 看 T3 完整数据
-cat docs/finals/charts/cross-context-degradation-20260604.md
+# 看 D-28 完整决策
+sed -n '/^### D-28/,/^## /p' docs/status/DECISIONS.md | head -100
 
-# 重生成 R4 截短 csv (其他挡, 如 250 chunk = 20s)
-OMP_NUM_THREADS=4 python3 tools/climb/build_truncated_r4.py --keep 250
+# 复现 mask sweep 矩阵
+cat tools/runs/climb/mask-sweep-20260606-0203/matrix.txt
 
-# 跑 T3 cross-context 实测 (扩大样本)
-OMP_NUM_THREADS=4 python3 tools/climb/eval_dynamic_ctx.py
+# T4 docker 骨架运行
+docker run --rm --platform linux/amd64 \
+  -v $PWD/data/test:/data/test:ro \
+  -v $PWD/tools/runs/climb/_docker_test:/output \
+  finvcup-infer:ctx-only
 
-# 看 R4 vs 截短 R4 的 pos 对比
-for d in submission/truncated-validation-20260604/*/; do
-  echo "=== $d ==="
-  python3 -c "import pandas as pd; df=pd.read_csv('$d/pred_test1.csv'); print({c:int(df[c].sum()) for c in ['c','na','i','bc','t']})"
-done
+# 复现 R4 全栈 mask050 / mask040 csv
+OMP_NUM_THREADS=4 python3 tools/climb/build_r4_mask_truncated.py --keep 375 --mask-prob 0.5
+OMP_NUM_THREADS=4 python3 tools/climb/build_r4_mask_truncated.py --keep 125 --mask-prob 0.5
+
+# 看今天 5 个 day8 候选 (P1-P5 全部真分回完, 别再投同款)
+ls submission/probe-day8-20260606-0115/
+cat submission/probe-day8-20260606-0115/MANIFEST.json | python3 -m json.tool | head -30
+
+# 复赛镜像核心配方 (S5):
+#   R4 = orthofuse-3src + wsp_ms 0.07 + e2v_ms 0.03 + hub_ms 0.03 (软加 T/BC/I)
+#   S5 = R4 + omni3b_ms2 0.05 (软加 T/BC/I)
+# 真分锚: 30s = 0.747131, 10s (no mask) = 0.7218 → 复赛短 ctx 需 dual-model
+
+# 当前 SOTA 梯队 (6/6):
+#   0.747569  P5 R4 + omni7b 0.05 (8B 超额, 答辩素材)
+#   0.747131  S5 R4 + omni3b 0.05 ★ 合规 SOTA 复赛主力
+#   0.745997  P2 R4 + omni3b 0.10
+#   0.745798  R4 baseline NSOTA07+e2v0.03+hub0.03
+#   0.741037  P1 S5 + wsp 0.10 (wsp 饱和)
+#   0.738899  R5 NSOTA07
+#   0.737580  M2 R4 mask050 10s ★★ 短 ctx fallback 主力
 ```
+
+## 关键不要重走 (D-28 落定)
+
+- ❌ 单一 mask 模型路线 (任何 prob, 公榜均匀都比 baseline 差 -0.001~-0.005)
+- ❌ mask=0.4 (公榜 30s 伤 -0.021, sweep 反向案例)
+- ❌ 信任本机内部 sweep 选超参 (本机定性 ✓, 定量选 ✗)
+- ❌ 用 pos 数量级估全栈真分 (softadd 放大效应, pos 几乎不变可能真分跌 0.021)
+- ❌ Omni × wsp_ms 叠加 (P1 -0.006, 不正交)
+- ❌ S5 + e2v_ms 升权 (P3 -0.011, Omni 已覆盖)
+- ❌ Omni3B 权重上探 0.10+ (P2 是峰, 不再扩)
+- ❌ R4 + 第 3 个 SSL_ms (S1 +w2v2 -0.008, 三 SSL 撞墙)
+- ❌ NSOTA07 单加 Omni3B 跳过双 SSL_ms (P4 -0.001, 双 SSL 是核心 +0.007)
+- ❌ 7B vs 3B 多模态升级 (仅 +0.0004 = 噪声)
+
+## 当前 git 工作树状态
+
+```
+M docs/status/DECISIONS.md          # D-28 已写
+M docs/status/JOURNAL.md            # 6/5-6/6 全 entries
+M docs/status/RESUME-NEXT-SESSION.md  # 本文件
+M tools/climb/cycle_context.py      # build_train 加 mask_prob + ckpt dump
+?? .dockerignore + Dockerfile + requirements.docker.txt
+?? models/                          # ctx-only ckpt (5 LGBM + thresholds + spec)
+?? src/                             # __init__.py + infer.py
+?? tools/__init__.py + tools/climb/__init__.py
+?? tools/climb/build_day8_candidates.py  + build_r4_mask_truncated.py + eval_mask_sweep.py
+?? submission/truncated-validation-20260604/R4_mask040_keep125_ctx10s/
+?? submission/truncated-validation-20260604/R4_mask040_keep375_ctx30s/
+?? submission/truncated-validation-20260604/R4_mask050_keep125_ctx10s/
+?? submission/truncated-validation-20260604/R4_mask050_keep375_ctx30s/
+```
+
+下次 session **必须先 commit** 这批改动 (≥ 10 文件), 否则 fresh clone 就丢全部 docker 骨架 + D-28 决策.

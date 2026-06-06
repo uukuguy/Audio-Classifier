@@ -1,0 +1,36 @@
+{
+  "name": "R4_mask050_keep125_ctx10s",
+  "keep_chunks": 125,
+  "keep_seconds": 10.0,
+  "ctx_mask_prob": 0.5,
+  "description": "R4 NSOTA07 + e2v0.03 + hub0.03, ctx LGBM 用 mask=0.5 重训, 截短到 125 chunk (10.0s)",
+  "pos": {
+    "c": 979,
+    "na": 998,
+    "i": 65,
+    "bc": 13,
+    "t": 527
+  },
+  "reference_r4_full_30s_no_mask": {
+    "true_score": 0.745798,
+    "pos": {
+      "c": 975,
+      "na": 947,
+      "i": 80,
+      "bc": 20,
+      "t": 523
+    }
+  },
+  "reference_r4_keep125_no_mask": {
+    "true_score": 0.721787,
+    "pos_approx": {
+      "c": 974,
+      "na": 996,
+      "i": 37,
+      "bc": 15,
+      "t": 341
+    }
+  },
+  "hypothesis": "mask 训能否压回 R4 在短 ctx 上的退化 (从 0.722 提到 0.735+)",
+  "if_full_30s_drops": "mask 训对 30s 完整 ctx 推理是否伤 (估 -0.005 内)"
+}

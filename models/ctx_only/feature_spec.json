@@ -1,0 +1,28 @@
+{
+  "paradigm": "context-only",
+  "feature_dim": 46,
+  "ctx_chunks": 375,
+  "label_order": [
+    "C",
+    "T",
+    "BC",
+    "I",
+    "NA"
+  ],
+  "submit_cols": [
+    "c",
+    "na",
+    "i",
+    "bc",
+    "t"
+  ],
+  "col_to_labelid": {
+    "c": 0,
+    "na": 4,
+    "i": 3,
+    "bc": 2,
+    "t": 1
+  },
+  "featurize_fn": "tools.climb.cycle_context.featurize",
+  "note": "infer 入口用 normalize_ctx_to_375 处理任意长度 ctx 后 featurize"
+}

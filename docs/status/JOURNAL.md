@@ -491,3 +491,44 @@
 - 14:30 推算 R4 全栈复赛真分: ctx 在 R4 中只占 C/BC/NA 列 + I 列 1/3, 实际 R4 退化 ≈ ctx 退化 × 0.5 → 测试集 2 (0,30]s 均匀分布估真分 0.72-0.74 (远好于事前估 0.60-0.70 范围)
 - 14:30 落盘答辩金料: docs/finals/charts/cross-context-degradation-20260604.md (T3 cross-context 表 + R4 退化推算 + 评委追问应答稿)
 - 15:30 主 commit R4 NEW SOTA + D-22~D-26 + T1/T3 工具 + finals 桶 + gitignore 例外 (finals-20260604/truncated-validation tracked) [5b75d55]
+- 15:35 commit 2 累积 6/1-6/3 cloud 训推脚本 + climb 探索工具链 + 中场复盘材料 (无新决策, 历史脚本入仓) [2e5ed80]
+- 14:50 重心转复赛 T4. 发现 ctx-LGBM 流水线无 ckpt 持久化, 全离线 train+predict 一次跑出 csv → docker 不兼容. 改 cycle_context.py 加 joblib dump (lgbm_*.joblib + thresholds.json + feature_spec.json 6 文件 ~5.3MB). pyright sklearn stub 误报但不阻塞
+- 14:30 写 src/infer.py 单入口 (--ckpt_dir --test_root --output_csv --ctx_mode), 复用 normalize_ctx_to_375 + featurize. 1000 段全量推理 csv = cycle_context.py 原 csv 二进制相同 (974/951/67/30/502 pos). 变长入口测: 截短 ctx 125 chunk 喂入 → pos 按预期变化 NA↑ C↓ BC/T↓ (920/996/37/10/334)
+- 14:55 Dockerfile (python:3.12-slim + lgbm 4.5 + sklearn 1.5) + .dockerignore + requirements.docker.txt. 镜像 390MB build 16s. ENTRYPOINT 跑 src.infer 默认 ckpt /app/models/ctx_only + /data/test → /output/pred_test1.csv. ckpt 搬 models/ctx_only/ (tracked) 跟"runs/产物 gitignored"语义分离
+- 14:58 docker run 双份验证: 30s ctx (--platform linux/amd64) 5.3s + 10s ctx 5.0s. 两份 csv 跟本机 src.infer 二进制相同. 30s vs 10s 段位差异 5.8% — T4 ctx-only 骨架闭环 ✓
+
+## 2026-06-05
+
+- 07:50 6/5 push 真分回 (6 + 2 截短). S5 R4+omni3b_ms2 0.05 = ★ **0.747131 NEW SOTA** (距前 2 -0.0003, 8B 合规 5B 总参). S3 双 SSL 0.02+0.02 = 0.7410. S4 wsp_ms 0.10 = 0.7395. S1 R4+w2v2_ms 三 SSL 否决 -0.008. S2/S6 双 SSL 升权过载 (0.04/0.05) = 0.7383 = 双 SSL 0.03 是窄峰
+- 07:50 T1 截短公榜实测: R4_keep125 (10s) = 0.7218 跌 0.024, R4_keep63 (5s) = 0.7070 跌 0.039. **T3 推算系统偏乐观 -0.009/-0.017** → 真实退化 = ctx-only 退化 × 0.8 (非 × 0.5). 复赛真分修正估值 (0,30]s 均匀分布 = 0.70-0.72 (原 0.72-0.74). T2 train mask 重训从"可跳"→"必做"
+- 08:00 ★ **D-27 战略转向**: 用户锁定 — 初赛冲分 5/天 → 1-2/天 (拿信息为主), 重心转复赛准备 (基础设施 / 模型 / 动态时长). 选 push 标准升级: 必须验证某条复赛准备相关假设, 不投纯叠权重. 复赛镜像首推从 R4 → S5 升级. DECISIONS D-27 落盘 (6 真分账本 + 三发现 + 战略转向 + SOTA 梯队更新)
+
+## 2026-06-06
+
+- 00:55 day8 候选 (D-27 战略后第 1 日, 2 push): build_day8_candidates.py 写入. P1 = S5+wsp_ms_010 (验 Omni3B × wsp 跨范式正交协同, 期望 0.747-0.751); P2 = R4+omni3b_ms2_010 (Omni3B 权重曲线右探, 验 S5 0.05 是否峰, 期望 0.745-0.749). pos 跟 R4/S5 偏差 ≤ ±2 段 → 合理区间
+- 01:15 用户要求多出 3 个冲分候选, 扩到 P1-P5. P3 = S5+e2v_ms_005 (Omni 是否覆盖 e2v 信号), P4 = NSOTA07+omni3b_ms2_005 (跳过双 SSL_ms 直 Omni, 验复赛镜像可简化), P5 = R4+omni7b_ms2_005 (8B 超额仅作信息, 7B vs 3B 差距数据). 落 submission/probe-day8-20260606-0115/
+- 01:25 A2 T2 ctx-LGBM train mask 改造: cycle_context.py build_train 加 mask_prob 参数 (env var CTX_MASK_PROB, 默认 0 不破 baseline). build_r4_mask_truncated.py 出 R4 mask050 全栈 csv. baseline 回归测试 = mask=0 csv 跟昨天 _ckpt_smoke 二进制相同 ✓
+- 01:35 ★★★★★ **T2 mask050 大幅有效**: ctx-only 端 10s ctx 上 T 召回 334→496 (+162), R4 全栈端 10s ctx 上 T 召回 341→527 (=30s 523 几乎相同), I 召回 37→65 (大幅恢复), BC 微降 15→13. 30s ctx 上 mask 不破 SOTA (T +4 I +3 BC -2). 估 R4 mask050 10s 真分 0.735-0.745 (vs baseline 0.722). 复赛镜像必走 mask 路
+- 08:00 ★★★★★★ **6/6 7 push 真分全回 + T2 mask050 公榜实证完成**, 八大信号:
+- 08:00 ① P1 S5+wsp_ms 0.10 = 0.741 (-0.006) Omni × wsp 不正交, wsp_ms 0.07 已饱和, 复赛锁 S5 配方
+- 08:00 ② P2 R4+omni3b 0.10 = 0.746 (-0.001 vs S5) omni3b 0.05 是峰, 不再上探
+- 08:00 ③ P3 S5+e2v 0.05 = 0.737 (-0.011) Omni3B 已覆盖 e2v 信号, R4 内 e2v 0.03 是天花板
+- 08:00 ④ P4 NSOTA07+omni3b 0.05 = 0.738 (-0.001 vs NSOTA07) Omni3B 单加 NSOTA07 不涨, **双 SSL_ms 0.03+0.03 才是 R4 的核心 +0.007**, 复赛镜像必须保留双 SSL_ms 60h 训练
+- 08:00 ⑤ P5 R4+omni7b 0.05 = 0.7476 (+0.0004 vs S5) **7B vs 3B 仅 +0.0004 = 噪声**, 答辩素材"3B 换 8B 合规几乎 free lunch"
+- 08:00 ⑥ M1 R4 mask050 30s = 0.728 (-0.018) **mask050 在 30s 上确实伤** SOTA, 比 pos 估计的 ±0.003 大 6 倍 — ctx-only pos 仅 -2 BC 但 R4 全栈多源 softadd 后误差放大
+- 08:00 ⑦ M2 R4 mask050 10s = 0.738 (+0.016) mask050 压回 80% 退化 (-0.024 → -0.008)
+- 08:00 ⑧ ★ **mask050 trade-off 实证**: 30s loss 0.018 vs 10s gain 0.016, (0,30]s 均匀分布净 -0.001. 真实复赛分布未知 → dual-model fallback (按 ctx 长度路由) 是最优形式. mask_prob 应 sweep {0.2, 0.3, 0.4} 找甜点
+- 02:00 ★★★★★ **mask sweep 矩阵实验**: 6 mask_prob × 5 keep_chunks = 30 cross-context F1 (eval_mask_sweep.py, train cap5, 评估集 ~55 通). 总耗时 618s 本机
+- 02:10 ★ **mask=0.5 是 outlier**: 30s ctx-only 端唯一 -0.005, 其他 mask (0.2/0.3/0.4/0.7) 在 30s 上都 +0.002-+0.004. **M1 公榜 R4 mask050 30s 伤 -0.018 = 全栈放大 4x 0.5 那个小 dip** (ctx-only -0.005 → 全栈 -0.018)
+- 02:10 ★ **mask=0.4 三种分布都最优**: 均匀=0.5730 短偏=0.5697 长偏=0.5767 (并列第 1). 5s+0.029 / 10s+0.014 / 15s+0.024 / 20s+0.010 / 30s+0.004 = 全方位涨, 0 损失
+- 02:10 ★ dual-model fallback 完美路由仅多 +0.0024 (均匀分布 0.5730→0.5754), **工程复杂度不值** — 单 mask=0.4 已经够
+- 02:15 build R4 mask040 30s + 10s csv 落盘. pos: 30s c=980 na=947 i=81 bc=18 t=527 (vs baseline 975/947/80/20/523 几乎不变, NA 没漂); 10s c=976 na=991 i=67 bc=12 t=527 (跟 mask050 10s 类似 +186 T 大救场). 估真分 30s 0.740-0.748 (修 mask050 -0.018 伤), 10s 0.735-0.742
+- 09:30 ★★★★★ **mask040 公榜真分回, sweep 严重打脸**: 30s = 0.7245 (跌 -0.021 比 mask050 的 -0.018 还差), 10s = 0.7325 (涨 +0.011 跟 mask050 0.738 差 -0.005). **sweep 在 30s 上预测最优实际最差** — sweep 内部 mask=0.4 +0.004 vs 公榜 mask=0.4 -0.021, 方向完全反向
+- 09:30 ★ Chain-First 根因 (我之前漏诊 2 处):
+- 09:30   ① 单源 ctx-only 评估 ≠ R4 全栈融合评估. softadd 把 ctx 单源 +0.004 的"小好"放大成全栈 -0.021 的"大坏"  ↑ 错误推断 mask=0.4 30s 安全
+- 09:30   ② sweep 评估集是 train 切分通, 公榜测试集 1 不同切分 — 通分布也不同  ↑ 错误假设 sweep 跟公榜同源
+- 09:30 ★ 修正结论: **mask=0.5 实际比 mask=0.4 公榜更好** (均匀分布: 0.5 = 0.7328 vs 0.4 = 0.7285). sweep 完全不可信, 必须用公榜对照
+- 09:30 ★ **dual-model fallback 公榜估真分 0.7417** (长 ctx baseline + 短 ctx mask050), vs 单 mask 0.5 均匀的 0.7328 = **多 +0.009**. 比 sweep 预测的 +0.0024 多 4 倍. dual-model 反而是合理选项
+- 09:30 ★ **复赛镜像决策修正**: ① 主推 = S5 (R4+omni3b 0.05) baseline 30s 训练 (-mask, SOTA 0.7471) ② 复赛短 ctx 准备 = dual-model R4 mask050 fallback. 跑通 docker pipeline 时同时支持两套 ctx ckpt 切换
+- 10:12 ★ 用户贴新榜单: S5 0.747131 **公榜排名第 3** (非昨日认知的第 4). 前 1 = 0.754713 (6/5 13:40, 距 +0.0076), 前 2 = SpeechlessAI 0.747569 (6/6 01:21, 距 +0.0004 = 跟我们 P5 7B 同分级), 前 3 = YanHui 0.747489 (6/4 15:18, 距 +0.0004). 校准: 我们跟 #2/#3 同噪声区, 距 #1 +0.0076 仍属可冲距离
+- 10:18 ★★ 用户纠正: **SpeechlessAI 是我们自己的另一个账号** (P5 R4+omni7b_ms2 0.05 = 0.747569 6/6 01:21 与 SpeechlessAI 完全同分同时间 = 自证). 真实公榜排位: #1 明天会更好 0.754713, **#2 我们 (SOTA = 0.747569 P5 7B 超额; 合规 S5 0.747131), #3 YanHui 0.747489. 距 #1 +0.0076**. 答辩注: 我们其实是公榜第 2, 复赛镜像合规版第 3
