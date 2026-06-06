@@ -552,3 +552,4 @@
 - 01:33 mask050 训练完成 (仅 3 分钟, 远低于 RESUME 估的 5-8h): OOF=0.5901 ckpt 完整 7 文件 → models/ctx_only_mask050/
 - 01:35 V1/V2 dual-model 验证 csv 落盘 → submission/dual-model-validation-20260607-0135/. V1 sanity LF-binary 等同 single-ckpt baseline csv (CRLF 归一化后) → 路由实现不破 baseline ✓. V2 (一半 10s 一半 30s) pos c=980/na=976/i=56/bc=21/t=507
 - 01:40 commit day9 真分 + mask050 训完 + V1/V2 一并落仓 (15 文件) [8e85a9f]
+- 01:48 handoff: D-29 写入 DECISIONS + RESUME 反映 V1/V2 就绪投 (3 文件) [1d93510]
