@@ -73,6 +73,8 @@
 | `../finals/quotes/` | 金句反思 (session 摘要 + 用户洞察) |
 | `../finals/charts/` | 可视化素材 (mermaid + matplotlib + 架构图) |
 | `../finals/deep-dives/` | 深度技术 (DD-1~DD-7 题目, 评委追问 backup) |
+| `../finals/T5-disclosure-email-draft.md` | **T5 报备邮件草稿 (6/8 21:00 截止, 4 公开模型: whisper/hubert/e2v + Omni3B 白名单)** |
+| `../finals/dual-model-fallback-design.md` | **D-28 dual-model fallback 设计 (θ=20s 路由, 3 步实现, 1-2 push 验证, 估真分 +0.009)** |
 
 ## External anchors
 

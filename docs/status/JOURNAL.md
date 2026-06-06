@@ -532,3 +532,11 @@
 - 09:30 ★ **复赛镜像决策修正**: ① 主推 = S5 (R4+omni3b 0.05) baseline 30s 训练 (-mask, SOTA 0.7471) ② 复赛短 ctx 准备 = dual-model R4 mask050 fallback. 跑通 docker pipeline 时同时支持两套 ctx ckpt 切换
 - 10:12 ★ 用户贴新榜单: S5 0.747131 **公榜排名第 3** (非昨日认知的第 4). 前 1 = 0.754713 (6/5 13:40, 距 +0.0076), 前 2 = SpeechlessAI 0.747569 (6/6 01:21, 距 +0.0004 = 跟我们 P5 7B 同分级), 前 3 = YanHui 0.747489 (6/4 15:18, 距 +0.0004). 校准: 我们跟 #2/#3 同噪声区, 距 #1 +0.0076 仍属可冲距离
 - 10:18 ★★ 用户纠正: **SpeechlessAI 是我们自己的另一个账号** (P5 R4+omni7b_ms2 0.05 = 0.747569 6/6 01:21 与 SpeechlessAI 完全同分同时间 = 自证). 真实公榜排位: #1 明天会更好 0.754713, **#2 我们 (SOTA = 0.747569 P5 7B 超额; 合规 S5 0.747131), #3 YanHui 0.747489. 距 #1 +0.0076**. 答辩注: 我们其实是公榜第 2, 复赛镜像合规版第 3
+- 10:30 主 commit 30 文件: D-28 mask 教训 + T4 docker 骨架 (390MB ctx-only) + 4 truncated csv + 排位校准 (RESUME/CURRENT-STATE) [75799ad]
+- 10:45 T5 报备邮件草稿落盘 docs/finals/T5-disclosure-email-draft.md. 精炼到 3 个必报 (whisper/hubert/e2v) + Omni3B 白名单建议列. Qwen3-0.6B/1.7B 删 (R4/S5 不依赖), wav2vec2 删 (S1 已证伪). 用户 6/8 前用 531045572@qq.com 发
+- 10:52 dual-model fallback 设计落盘 docs/finals/dual-model-fallback-design.md. θ=20s (250 chunk) 路由 baseline/mask050 双 ckpt, 估真分 0.737-0.738 vs 单一 mask 0.7328 (+0.005-0.009). 实现 3 步: ① cycle_context CTX_MASK_PROB=0.5 训 mask050 ckpt 5-8h ② src/infer.py 加 --ckpt_dir_short + 长度路由 ③ Docker COPY 双 ckpt. 工作量半天 + 1-2 push 验证
+- 11:08 用户确认队名 SpeechlessAI (跟公榜账号一致), T5 邮件草稿就绪待发
+- 11:18 ★ C 任务完成: src/infer.py 加 dual-ckpt 路由. infer_one_segment 按 n_orig 路由 (n>=θ→long, else→short), 单 ckpt 模式向后兼容. 6 单元测试通过 (375/125/边界 250/249). 1000 段端到端: single mode = baseline 0.7458 csv binary identical, dual mode (短长同 ckpt) 全走 long 输出 = single. 顺手修 csv writer CRLF→LF 跨 OS 一致性
+- 11:19 ★ E 任务完成: tools/climb/build_dual_model_validation.py V1 (sanity 全 30s) + V2 (一半截 10s) 工具. fallback 模式 (短=长 ckpt) V1 跑 1000 段 = baseline binary identical, V2 强行模式: materialize 500 截短 + 500 保留, 路由 long=500/short=500 完美切换, pos dist 跟 baseline 差 147 行 = 截短退化量级跟 mask050 公榜实测一致. 安全: eval→ast.literal_eval (security hook 建议)
+- 11:23 ★ B 任务: tools/climb/train_mask050_ckpt.sh 落盘 (CTX_MASK_PROB=0.5, OMP=4 限线程, dump 到 models/ctx_only_mask050/). 用户点头跑 → 本机 5-8h 或云端 4090 1-2h. 等 ckpt 训完一键跑 build_dual_model_validation 出真 V1/V2
+- 11:26 .gitignore 加白名单 !submission/dual-model-validation-*/ (V1/V2 跑出后入仓 deliverable, 跟 truncated-validation 同类)

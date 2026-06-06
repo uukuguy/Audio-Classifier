@@ -29,3 +29,4 @@ catboost_info/
 submission/*
 !submission/finals-20260604/
 !submission/truncated-validation-20260604/
+!submission/dual-model-validation-*/
