@@ -540,3 +540,4 @@
 - 11:19 ★ E 任务完成: tools/climb/build_dual_model_validation.py V1 (sanity 全 30s) + V2 (一半截 10s) 工具. fallback 模式 (短=长 ckpt) V1 跑 1000 段 = baseline binary identical, V2 强行模式: materialize 500 截短 + 500 保留, 路由 long=500/short=500 完美切换, pos dist 跟 baseline 差 147 行 = 截短退化量级跟 mask050 公榜实测一致. 安全: eval→ast.literal_eval (security hook 建议)
 - 11:23 ★ B 任务: tools/climb/train_mask050_ckpt.sh 落盘 (CTX_MASK_PROB=0.5, OMP=4 限线程, dump 到 models/ctx_only_mask050/). 用户点头跑 → 本机 5-8h 或云端 4090 1-2h. 等 ckpt 训完一键跑 build_dual_model_validation 出真 V1/V2
 - 11:26 .gitignore 加白名单 !submission/dual-model-validation-*/ (V1/V2 跑出后入仓 deliverable, 跟 truncated-validation 同类)
+- 11:28 commit dual-model sprint 1 完整链 (C+E+B 工程就绪 + T5 草稿 + 队名 SpeechlessAI) [84b56bf]

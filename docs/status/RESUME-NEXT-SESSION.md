@@ -1,13 +1,13 @@
 # Next-Session Handoff
 
-**Updated:** 2026-06-06 10:25 (D-28 mask 教训 + dual-model + T4 docker 骨架 + 公榜排位校准: 总 #2 (P5 alt-id) / 合规 #3)
+**Updated:** 2026-06-06 11:28 (D-28 sprint 1 完成: dual-model 工程链全就绪 + T5 草稿就绪 + 队名锁 SpeechlessAI)
 **恢复命令:** `/project-state resume`
 
 ## TL;DR (3 句)
 
 1. **🏆 6/6 公榜实位 (用户 10:18 校准)**: #1 明天会更好 0.754713 / **#2 我们 P5 SpeechlessAI alt-id 0.747569 (8B 超额不进复赛)** / #3 YanHui 0.747489 / **合规 S5 0.747131 第 3 距 #1 +0.0076 (R4 软加单次量级内)**. 9 个 push 真分回完, 复赛镜像配方锁定 = S5; R4 内**双 SSL_ms 0.03+0.03 必保** (+0.007 核心), **Omni3B 0.05 是峰**, Omni-7B vs 3B 仅 +0.0004 (选 3B 几乎 free lunch).
 2. **⚠ T2 mask 训实验大教训**: 本机 sweep 选出 mask=0.4 "最优", 公榜实际跌 -0.021 = sweep 与公榜全栈在 30s 上**完全反向**. 根因: ① 单源 ctx-only ≠ R4 全栈 softadd 放大; ② sweep 评估通 ≠ 公榜测试通分布. **本机评估只能定性, 选超参必须公榜验证**.
-3. **战略转向 dual-model fallback**: 单一 mask 模型 (任何 prob) 公榜均匀都比 no-mask 差 -0.001~-0.005. dual-model (长 ctx baseline + 短 ctx mask050) 估真分 **0.7417 = +0.009**. T4 docker 骨架已完成 (ctx-only 390MB), 下一步: 实现 dual-model 路由 + S5 全栈打包.
+3. **D-28 sprint 1 完成 (6/6 11:28 commit 84b56bf)**: dual-model fallback 工程链全就绪. C (src/infer.py 双 ckpt 路由, 6 单测 + 端到端回归 binary identical) + E (build_dual_model_validation.py V1/V2 工具, fallback 验证通过) + B (train_mask050_ckpt.sh 训练脚本就绪) + T5 报备邮件草稿就绪 (队名 SpeechlessAI). **下次 session 唯一阻塞 = 用户启 mask050 训练 (5-8h 本机 / 1-2h 云端)**, 训完一键出真 V1/V2 push.
 
 ## 6/6 全部 9 push 真分账本
 
@@ -52,41 +52,41 @@
 | 双 SSL_ms 训 60h | 必做 | **必做** ✓ |
 | Omni-3B 训 | 必做 | **必做** ✓ |
 
-## 下次 session 第一步 (优先级排序)
+## 下次 session 第一步 (按 deadline 排序)
 
 ```bash
 # 1. resume
 /project-state resume
 
-# 2. 决定先做哪个 (用户点头):
-#    ① T5 报备邮件 (6/8 截止, 30 分钟)
-#    ② dual-model fallback 设计实现 (改 src/infer.py 加 ctx 长度路由, 阈值 15s/20s 待定)
-#    ③ A3 R4 全栈 docker 升级 (S5 配方 ckpt 打包 + softadd 融合 + dual 路由)
-#    ④ 答辩素材落 finals/ (sweep 矩阵 + 公榜反向 = "评估错配"金料 + 7B vs 3B 对照)
-#    ⑤ 今天 6/7 1-2 push (按 D-27 节奏, 不冲分只拿信息)
+# 2. 立即决策 (deadline 顺序, 半天闭环):
+#    ① T5 报备邮件 (6/8 21:00 截止 = 剩 ~57h, 用户操作 30 min)
+#        草稿在 docs/finals/T5-disclosure-email-draft.md, 队名 SpeechlessAI 已填
+#        用 531045572@qq.com 发, 收件 xinyebei@xinye.com
+#    ② mask050 ckpt 训练启动 (5-8h 本机 / 1-2h 云端, 用户选)
+#        ./tools/climb/train_mask050_ckpt.sh
+#        训完产物自动到 models/ctx_only_mask050/ (7 文件 ~5.3MB)
+#    ③ V1/V2 验证 csv 生成 (1 min, ckpt 训完后)
+#        python3 tools/climb/build_dual_model_validation.py \
+#            --ckpt_dir models/ctx_only \
+#            --ckpt_dir_short models/ctx_only_mask050 \
+#            --out_dir submission/dual-model-validation-$(date +%Y%m%d-%H%M)/
+#    ④ 用户 push V1 sanity (验路由不破 baseline, 期望 0.7458 ± 0.001)
+#    ⑤ 用户 push V2 real (验 dual-model 实际改善, 期望 0.73-0.745)
 
-# 3. commit 当前 git 工作树 (大量未 commit: src/ + Dockerfile + models/ + 4 个新脚本 + 4 个 truncated csv + DECISIONS D-28 + JOURNAL + RESUME)
-git add -A
-git commit -m "6/6: D-28 mask sweep 教训 + T4 docker 骨架 + 9 push 真分 + dual-model 战略"
+# 3. 平行可做 (不阻塞 mask050 训练):
+#    ⑥ A3 R4 全栈 docker 升级 (S5 配方 ckpt 打包, ~6G 镜像)
+#    ⑦ 答辩素材落 finals/ (sweep 矩阵 + 公榜反向 + 7B/3B 对照)
+#    ⑧ 6/7 1 push 冲 #1 (S5 + 新软加组合, perfold 多样性)
 ```
 
-## Open Questions (待用户确认)
+## 路由阈值已锁 θ=20s (250 chunk, D-28 策略 A 保守)
 
-1. **6/7 今天投多少 push?** 按 D-27 = 1-2 push/天拿信息. 公榜校准后: 距 #1 +0.0076 在 R4 软加单次提升量级内 (D-22 +0.011, D-25 +0.007), 冲 #1 不再"必输的赌"; 但 YanHui (#3) 距合规 S5 仅 -0.00036, 一次失败 -0.001 就掉 #4
-   - 选项 A: 0 push 今天, 全转 docker / dual-model 实现
-   - 选项 B: 1 push, 投 dual-model 模拟 csv (验证 dual 策略真分 ≈ 0.74+)
-   - 选项 C: 2 push, 加投复赛镜像答辩素材 csv
-   - 选项 D: 1 push 冲 #1 (S5 + perfold 多样性 / 新软加组合), 同时备 dual-model docker
+理由: D-28 教训"评估错配"刚被狠狠教训, 不再相信本机线性插值. 先发简单策略 A 拿公榜真分, V2 push 回来后看是否调激进到 θ=15s (策略 B). 文档: `docs/finals/dual-model-fallback-design.md`.
 
-2. **dual-model 路由阈值定多少?** mask050 sweep 显示 15s/20s 都是边界点
-   - 选项 A: ≥ 20s 用 baseline, < 20s 用 mask050 (保守)
-   - 选项 B: ≥ 15s 用 baseline, < 15s 用 mask050 (激进, 更多场景用 baseline 保 SOTA)
-   - 推荐: B (先粗后细, mask050 实测真分曲线还不全)
+## Open Questions (待用户决策)
 
-3. **是否补 mask030 + mask020 公榜验证?** mask040/050 已知, 但**未知 mask 系列的真实公榜峰值**
-   - 选项 A: 不补 — 单一 mask 都比 baseline 差, ROI 低
-   - 选项 B: 补 mask030 30s + 10s 1 push (找窄峰)
-   - 推荐: A (按 D-28 教训, 单一 mask 路线已废)
+1. **mask050 训练在哪跑?** 本机 (5-8h, OMP=4 不卡) vs 云端 4090 (1-2h, 需先 rsync cycle_context.py 跟最新版同步)
+2. **6/7 push 量?** 公榜距 #1 仅 +0.0076 = R4 软加单次量级内; YanHui (#3) 距合规 S5 仅 -0.00036, 易换位. 投 V1/V2 还是单独冲 #1 候选?
 
 ## Ready-to-paste commands
 
@@ -139,22 +139,10 @@ cat submission/probe-day8-20260606-0115/MANIFEST.json | python3 -m json.tool | h
 - ❌ NSOTA07 单加 Omni3B 跳过双 SSL_ms (P4 -0.001, 双 SSL 是核心 +0.007)
 - ❌ 7B vs 3B 多模态升级 (仅 +0.0004 = 噪声)
 
-## 当前 git 工作树状态
+## 当前 git 工作树状态 (6/6 11:28)
 
-```
-M docs/status/DECISIONS.md          # D-28 已写
-M docs/status/JOURNAL.md            # 6/5-6/6 全 entries
-M docs/status/RESUME-NEXT-SESSION.md  # 本文件
-M tools/climb/cycle_context.py      # build_train 加 mask_prob + ckpt dump
-?? .dockerignore + Dockerfile + requirements.docker.txt
-?? models/                          # ctx-only ckpt (5 LGBM + thresholds + spec)
-?? src/                             # __init__.py + infer.py
-?? tools/__init__.py + tools/climb/__init__.py
-?? tools/climb/build_day8_candidates.py  + build_r4_mask_truncated.py + eval_mask_sweep.py
-?? submission/truncated-validation-20260604/R4_mask040_keep125_ctx10s/
-?? submission/truncated-validation-20260604/R4_mask040_keep375_ctx30s/
-?? submission/truncated-validation-20260604/R4_mask050_keep125_ctx10s/
-?? submission/truncated-validation-20260604/R4_mask050_keep375_ctx30s/
-```
+工作树**干净** (所有改动已 commit):
+- 75799ad: 6/6 D-28 mask 教训 + T4 docker 骨架 + 公榜排位校准 (30 文件)
+- 84b56bf: 6/6 D-28 sprint 1 dual-model 工程链就绪 + T5 队名 (8 文件)
 
-下次 session **必须先 commit** 这批改动 (≥ 10 文件), 否则 fresh clone 就丢全部 docker 骨架 + D-28 决策.
+下次 session resume 后**无需先 commit**, 直接按"下次 session 第一步"启动 mask050 训练.
