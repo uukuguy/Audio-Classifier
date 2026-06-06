@@ -1127,7 +1127,9 @@ cloud/train_qwen3_head.py predict_test 设计有 3 个串联 bug:
 #### 后续工作 (优先级)
 
 1. **dual-model fallback 设计** (src/infer.py 加 ctx 长度路由 — 阈值待定 15s/20s) — 中等工作量, 高 ROI
+   - **更新 (6/6 11:28 commit 84b56bf, sprint 1 完成)**: 工程链 C+E+B 全就绪. **θ 锁定 = 20s (250 chunk, 策略 A 保守)**. 理由: D-28 "评估错配" 教训刚出, 不信本机线性插值, 先发 A 拿公榜真分, V2 push 回来后再考虑调激进 (策略 B θ=15s). 设计文档: `docs/finals/dual-model-fallback-design.md`. 唯一阻塞 = mask050 ckpt 训练 (5-8h 本机 / 1-2h 云端).
 2. **A3 R4 全栈 docker 升级** (S5 配方 ckpt 打包 + softadd 融合 + dual-model 路由) — 大工作量, 必做
 3. **答辩素材落 finals/** (sweep 矩阵 + 公榜反向案例 = "评估错配" 金料 + 7B vs 3B 对照) — 不急, 持续积累
 4. **T5 报备邮件** (6/8 截止) — 不急但硬日期, 30 分钟可完成
+   - **更新 (6/6 11:08)**: 草稿就绪 `docs/finals/T5-disclosure-email-draft.md`, 队名锁定 **SpeechlessAI** (跟公榜账号一致), 报备 3 个非白名单模型 (whisper-large-v3 / chinese-hubert-large / emotion2vec_base). 用户用 531045572@qq.com 发即可。
 5. **冲分降速观察** — 距前 1 仅 -0.008, P5 7B 已证多模态容量不是瓶颈; 后续 push 只为复赛准备验证, 不冲分
