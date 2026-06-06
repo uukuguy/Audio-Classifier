@@ -542,4 +542,4 @@
 - 11:26 .gitignore 加白名单 !submission/dual-model-validation-*/ (V1/V2 跑出后入仓 deliverable, 跟 truncated-validation 同类)
 - 11:28 commit dual-model sprint 1 完整链 (C+E+B 工程就绪 + T5 草稿 + 队名 SpeechlessAI) [84b56bf]
 - 11:30 RESUME handoff 刷 sprint 1 完成态 + journal 11:28 commit hash 补齐 [2d9e27d]
-- 11:32 修正: 前一 commit 499d602 漏改 DECISIONS.md (Edit 因没先 Read 而失败但 commit msg 已宣称改了 = 双重状态). 本次真改 D-28 注解 θ=20s 锁定 + T5 队名 SpeechlessAI
+- 11:32 修正: 前一 commit 499d602 漏改 DECISIONS.md (Edit 因没先 Read 而失败但 commit msg 已宣称改了 = 双重状态). 本次真改 D-28 注解 θ=20s 锁定 + T5 队名 SpeechlessAI [24625c3]
