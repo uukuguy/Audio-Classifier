@@ -9,12 +9,12 @@
 
 - **phase**: D-30 dual-model R4 全栈证伪 → 复赛镜像锁 S5 单 baseline ctx. S5=0.747131 合规 SOTA, 公榜 #3, 距 #1 +0.0076. 剩 9 天 × 5 = 45 push 配额. 战略: 复赛准备最优 + 公榜信息收集.
 - **best online**: 0.747569
-- **last_cycle**: 40
+- **last_cycle**: 43
 - **next_hypothesis**: ?
 
 **In-flight job** (resume MUST verify liveness):
-- task: Cycle 25: Cross-context S5 probe (cross-ctx degradation on real LB)
-- next_action: build S5 truncated variants keep=125/63 + push 2
+- task: Cycle 25-30 完成: cross-context curves S5+R4, 10 CSVs 就绪. 现有素材池穷尽. 下一步: 新训练 (per-fold Omni-3B/new SSL/new ctx base) 或 T5 邮件 + docker 升级.
+- next_action: 用户提交 cross-context CSVs 到公榜 + T5 邮件 6/8 前发
 
 ## Paradigm calibration matrix
 
