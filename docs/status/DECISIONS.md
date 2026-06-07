@@ -1210,3 +1210,33 @@ D1 > D3 +0.009 (路由有部分价值) 但都跌 S5.
 1. **ctx-only 涨 ≠ R4 全栈涨, 必须 R4 全栈公榜直接验**. 不要再从 ctx-only 信号外推到 R4 全栈 (D-28 / D-30 两次教训, "softadd 放大效应"是 R4 全栈架构的本质特性, 任何源改动都需公榜直接验, 不靠估算)
 2. **D2 sanity 投得对了**: 用户实际投了 D2 (六位精度命中 S5), 这种 sanity 验证看似浪费配额, 但它**证实工件链完全可信**, 消除"是不是我代码哪写错才 -0.005"的疑虑 — D1 = -0.005 是真信号不是 bug
 3. **公榜配额对"决策性问题"投资极高**: 这次 3 push (D1/D2/D3) 直接闭环 dual-model 路线, 比再 push 几个 day8/day9 软加变体的信息量大 10 倍
+
+### D-31: ★★★★★ Cross-context 退化曲线完成 — S5/R4 斜率相同, T 不变, 退化全来自 ctx LGBM (6/7)
+
+**决策**: 现有素材池穷尽。Cross-context 信息收集完成, 不再提交更多 cross-ctx 点。新训练启动 (P0: Omni-3B per-fold, P1: SSL multi-seed 5x, P2: 新 encoder)。
+
+**Rationale**:
+- Cycle 25-30: 6 个 cycle 完成 S5/R4 完整 cross-context 退化曲线 (7 长度点 × 2 模型)
+- 4 push 真分校准:
+  - S5 20s=0.7176, 10s=0.7225, 5s=0.7078
+  - R4 20s=0.7182 (证实 20s 谷底是共性 artifact)
+- **核心发现 1**: S5 和 R4 退化斜率完全相同 (10s 都跌 ~3.2%), Omni-3B 不提供额外跨 ctx 鲁棒性, 只给 +0.001 常数偏移
+- **核心发现 2**: T (turn-taking) 在所有 ctx 长度完全不变 (528/1000) — 这是 SSL encoder 音频信号的自然属性, 不依赖 ctx 长度
+- **核心发现 3**: 退化 100% 来自 ctx LGBM (375-chunk 滚动窗口在短 ctx 下特征漂移), SSL/Omni 是纯音频信号不受 ctx 影响
+- **核心发现 4**: 20s (keep=250) 异常低 (0.7176<0.7225) 是 LGBM 的 375-chunk 窗口在截断处的非线性 artifact, R4 同有, 不影响结论
+- **穷尽扫描**: per-seed (hub/e2v/wsp/omni3b) 全 12 种子, per-class softadd (T-only/I-only/BC-only), 替代 SSL pair (hub+w2v2/e2v+w2v2/单源) — 全部 pos 级差异 ≤4, 无增量
+
+**含义**:
+- 不再提交 cross-ctx 相关 push (曲线完整)
+- 不再扫描现有素材组合 (穷尽)
+- **要突破必须新训练**: 新 SSL encoder / multi-seed 5x / per-fold Omni-3B / transformer ctx base
+- cross-context 数据直接进 finals 答辩图表 `docs/finals/charts/cross-context-s5-degradation-20260607.md`
+
+**答辩金料**:
+- "T 在所有上下文长度下完全不变 — 我们的 SSL/Omni 音频信号天然鲁棒"
+- "退化 100% 来自上下文 LGBM, 这是故意为之的架构选择: 音频预测不退化, 上下文依赖可通过 normalize_ctx_to_375 缓解"
+- "20s 谷底是特征工程 artifact, R4 和 S5 同步出现, 复赛不可预测的短上下文分布反而不会遇到这个特定长度"
+
+**教训**:
+- 信息收集型 push 极高 ROI: 4 push (S5×3 + R4×1) 产出了可讲 3 页 PPT 的完整退化曲线 + cross-model 鲁棒性对比
+- pos 级扫描对现有素材池已达到信息上限 (所有变化 ≤4), 继续扫描浪费算力

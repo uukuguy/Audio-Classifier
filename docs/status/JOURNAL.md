@@ -567,3 +567,18 @@
 - 16:00 D1/D2/D3 真分回完: **D2 = 0.747131 精确等于 S5 (六位精度 = 工件链 100% 正确)** / D1 dual = 0.742064 (-0.005 vs S5, dual-route 在 R4 全栈反向) / D3 全 mask050 = 0.733222 (-0.014). D1 > D3 +0.009 (路由有部分价值) 但都跌 S5
 - 16:00 **D-30 待写**: dual-model fallback 在 R4 全栈下证伪 — ctx-only V2 +0.010 经 softadd 进 R4 反向 -0.005 (跟 D-28 mask 公榜反向 4x 放大同形). 复赛镜像锁 S5 单 baseline ctx ckpt, 不加 mask050 / 不加路由
 - 16:08 handoff: D-30 写入 DECISIONS + CURRENT-STATE 阶段标题更新 + RESUME 全面反映复赛镜像 D-30 终态 (4 文件) [1a11a75]
+
+## 2026-06-07 (下午 session: Cycles 25-30)
+
+- 16:20 climb resume: backfill runs.csv 23→39 条 (D-22~D-30 16 push), update session-state + regen tree [7d06369]
+- 16:30 Cycle 25: S5 cross-context keep=125(10s)/63(5s), ctx LGBM retrain + S5 softadd → 2 CSV 就绪 [7d06369]
+- 16:35 Cycle 26: per-seed (12 seeds × hub/e2v/wsp/omni3b) + per-class (T/I/BC-only) + SSL pair (hub+w2v2 etc) 全扫描 — pos 级差异 ≤4, 现有素材池穷尽
+- 16:40 Cycle 27: S5 完整 cross-context 曲线 7 点 (keep=250/188/125/94/63/31), ctx 模型训 1 次复用, 4 CSV 新就绪 + finals chart [d74658d]
+- 16:45 Cycle 28: cross-context 答辩图表 `docs/finals/charts/cross-context-s5-degradation-20260607.md` [d74658d]
+- 16:50 Cycle 29: Per-fold Omni-7B 多样性 — fold2 I+2 BC+1 最佳, 但 pos 级 dampened (≤4). 需 per-fold Omni-3B [d74658d]
+- 17:00 Cycle 30: R4 cross-context 全曲线对比 S5 — **R4 和 S5 退化斜率完全相同, 仅 T 差 1 样本 (527 vs 528)**. 退化 100% 来自 ctx LGBM [b84b5c9]
+- 17:10 用户提交 S5 20s/10s/5s + R4 20s 共 4 push
+- 17:15 真分回: S5 20s=0.7176 (异常低), S5 10s=0.7225, S5 5s=0.7078, R4 20s=0.7182 (证实 20s 谷底是共性 artifact). 更新 runs.csv 46 条 [316bf58]
+- 17:20 D-31 写入: cross-context 信息收集完成, S5/R4 退化斜率相同 (Omni 不提供跨 ctx 鲁棒性), T 不变, 现有素材池穷尽, 启动新训练阶段
+- 17:25 **新训练路线**: P0 Omni-3B per-fold (脚本 `cloud/predict_omni_per_fold.py` 就绪, 30min), P1 SSL multi-seed 5x, P2 新 SSL encoder. 所有云实例已关机
+- 17:30 project-state 完整收口: CURRENT-STATE + DECISIONS D-31 + JOURNAL + RESUME 全更新, 新 session 可 resume 恢复
