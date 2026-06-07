@@ -553,3 +553,12 @@
 - 01:35 V1/V2 dual-model 验证 csv 落盘 → submission/dual-model-validation-20260607-0135/. V1 sanity LF-binary 等同 single-ckpt baseline csv (CRLF 归一化后) → 路由实现不破 baseline ✓. V2 (一半 10s 一半 30s) pos c=980/na=976/i=56/bc=21/t=507
 - 01:40 commit day9 真分 + mask050 训完 + V1/V2 一并落仓 (15 文件) [8e85a9f]
 - 01:48 handoff: D-29 写入 DECISIONS + RESUME 反映 V1/V2 就绪投 (3 文件) [1d93510]
+- 03:00 V1/V2 真分回完: V1=0.710789 (= 5/27 cycle1 ctx-only 一字不差, 路由实现 100% 正确) / V2=0.720935 (+0.010 vs V1, dual-model 在动态长度上首次公榜实证)
+- 11:34 build_r4_dual_ctx 第一版用 models/ctx_only/ single-seed ckpt 跑 R4 全栈 sanity → fused.ctx_te 不同源 (差 ~0.03 mean abs, single seed vs variant-F 5 seed). 必须重训 variant-F-mask050 5 seed 同纲, 否则 R4 dual 公榜信号无法解读
+- 12:07 起 variant-F-mask050 5 seed × 5 fold 训练 (nohup pid 35389, OMP=4, 估 40-65 min). v2 版本同时算 test_v2 字段 (按 V2 截短规则推理), 跟 V2 ctx-only 完全同纲
+- 12:13 build_r4_dual_ctx_v2 准备就绪 (D1 dual / D2 sanity / D3 全 mask050 三候选), 等 mask050 训完 probs.npz 直接接
+- 12:48 实测每 fold 41 min (vs 估 8 min), 5 fold 总 ~4h 太慢. 杀, 重写 gen_variant_f_mask050_fast.py: 跳过 cap1 OOF (V2 公榜已证), build_windows 全局 1 次共享给 5 seed, 估 10 min
+- 12:55 fast 第一版漏 scale_pos_weight, pos 全崩 (C=1000 BC=4). 跟 gen_variants.py 严格同纲必须加 spw = (neg-pos)/pos. 删坏产物
+- 13:02 fast spw 修复版起跑 (nohup pid 44334, OMP=4)
+- 13:08 mask050-fast 训完 (10 min 总耗): pos full c=982 na=948 i=69 bc=28 t=513 / pos v2 c=982 na=972 i=55 bc=27 t=514 (跟 V2 ctx-only c=980/na=976/i=56/bc=21/t=507 几乎重合 = 同纲 ✓)
+- 13:09 build_r4_dual_ctx_v2 跑通: D2 sanity pos = 975/947/80/15/528 精确复现 R4 baseline ✓; D1 dual pos=980/970/73/13/528 (Δ vs S5: na+23 i-7 bc-2 c+5); D3 全 mask050 pos=982/948/83/15/528 (Δ: c+7 i+3 t+0 ≈ S5). 三 csv 落 submission/probe-day9-r4dualv2-20260607-1308/, 押"V2 ctx +0.010 经 softadd 进 R4 估 +0.005-0.015"

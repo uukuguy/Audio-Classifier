@@ -1,0 +1,60 @@
+{
+  "_note": "A3 先验 V2: R4 全栈 + variant-F mask050 dual-route ctx (严格同纲).",
+  "_chain": "V1 ctx-only single = 0.710789 → V2 ctx-only dual = 0.720935 (+0.010) → ?",
+  "_strict_align": "ctx_long = variant-F 5 seed baseline (te_lgbm_v1, R4 baseline 用的), ctx_short = variant-F 5 seed mask050 按 V2 截短规则推理 (test_v2 字段). 同纲.",
+  "_anchor": {
+    "S5_baseline_real": 0.747131,
+    "V1_ctx_only_real": 0.710789,
+    "V2_ctx_only_real": 0.720935
+  },
+  "candidates": [
+    {
+      "name": "D2_R4_dual_30s_sanity",
+      "description": "R4 全栈 sanity (ctx 全 long, 不路由)",
+      "expected": "≈ R4 baseline 0.7458 (验工件一致性)",
+      "pos": {
+        "c": 975,
+        "na": 947,
+        "i": 80,
+        "bc": 15,
+        "t": 528
+      }
+    },
+    {
+      "name": "D1_R4_dual_half_truncated",
+      "description": "R4 全栈 + dual-route ctx (V2 截短规则)",
+      "hypothesis": "ctx-only V2 涨 +0.010, 经 softadd 进 R4 全栈估算 +0.005 ~ +0.015",
+      "key_signal": "若 ≥ 0.7458 → dual-route 进复赛镜像; 若 < 0.740 → 反向, 弃 dual-route",
+      "expected": "0.737 ~ 0.760 区间过宽, 公榜定",
+      "route": {
+        "long": 500,
+        "short": 500
+      },
+      "pos": {
+        "c": 980,
+        "na": 970,
+        "i": 73,
+        "bc": 13,
+        "t": 528
+      }
+    },
+    {
+      "name": "D3_R4_all_mask050_30s",
+      "description": "R4 全栈 + 全用 mask050 ctx (全 30s 推理, 不路由)",
+      "hypothesis": "测 mask050 在不路由情况下对 R4 全栈的影响 (单 ckpt 替换 baseline)",
+      "key_signal": "跟 D1 比 — 若 D3 ≈ D1 路由价值 ≈ 0 (mask050 直接换 baseline 够); 若 D3 < D1 路由价值真实存在",
+      "pos": {
+        "c": 982,
+        "na": 948,
+        "i": 83,
+        "bc": 15,
+        "t": 528
+      }
+    }
+  ],
+  "_reference": {
+    "R4_baseline_10s_anchor": 0.721787,
+    "M2_R4_mask050_10s_real": 0.73758
+  },
+  "_created": "2026-06-07T13:08:52"
+}
