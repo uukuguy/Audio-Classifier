@@ -564,3 +564,5 @@
 - 13:09 build_r4_dual_ctx_v2 跑通: D2 sanity pos = 975/947/80/15/528 精确复现 R4 baseline ✓; D1 dual pos=980/970/73/13/528 (Δ vs S5: na+23 i-7 bc-2 c+5); D3 全 mask050 pos=982/948/83/15/528 (Δ: c+7 i+3 t+0 ≈ S5). 三 csv 落 submission/probe-day9-r4dualv2-20260607-1308/, 押"V2 ctx +0.010 经 softadd 进 R4 估 +0.005-0.015"
 - 13:12 commit D1/D2/D3 + mask050-fast + r4_dual_v2 工具链 (8 文件) [29c0238]
 - 13:16 handoff: RESUME 反映 V1/V2 真分 + D1/D3 待投 + 工件链表 (2 文件) [3ef30b6]
+- 16:00 D1/D2/D3 真分回完: **D2 = 0.747131 精确等于 S5 (六位精度 = 工件链 100% 正确)** / D1 dual = 0.742064 (-0.005 vs S5, dual-route 在 R4 全栈反向) / D3 全 mask050 = 0.733222 (-0.014). D1 > D3 +0.009 (路由有部分价值) 但都跌 S5
+- 16:00 **D-30 待写**: dual-model fallback 在 R4 全栈下证伪 — ctx-only V2 +0.010 经 softadd 进 R4 反向 -0.005 (跟 D-28 mask 公榜反向 4x 放大同形). 复赛镜像锁 S5 单 baseline ctx ckpt, 不加 mask050 / 不加路由

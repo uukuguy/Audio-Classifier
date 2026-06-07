@@ -1158,3 +1158,55 @@ cloud/train_qwen3_head.py predict_test 设计有 3 个串联 bug:
 - 押风险博 #1 配额 (5/天) 节省到下个素材变化点 (新 multi-modal LLM 训完, 或 ctx base 重训完)
 
 **流程教训**: build_day9 第一版 `make_sota_3src` 列序写错 (列 1/2/3/4 全错), 没固化 S5 sanity assert 差点投错 csv. 已固化 `assert s5_pos == expected = {c:975, na:947, i:80, bc:15, t:528}` — **后续任何"R4 全栈再叠 src"类脚本必须先复算 S5 sanity 通过才允许写 csv**.
+
+### D-30: ★★★★★ dual-model fallback 在 R4 全栈下证伪 (ctx-only +0.010 → R4 全栈 -0.005, 反向放大) — 复赛镜像锁 S5 单 baseline ctx ckpt
+
+**触发**: 6/7 D1/D2/D3 真分回完.
+
+**证据**:
+| 候选 | 真分 | Δ vs S5 (0.747131) | 解读 |
+|---|---|---|---|
+| **D2** R4 全栈 sanity (ctx 全 baseline) | **0.747131** | **= 0 六位精度** | 工件链 100% 正确, S5 精确复现 |
+| D1 R4 全栈 + dual-route ctx | 0.742064 | -0.005 | dual-route 在 R4 全栈反向 |
+| D3 R4 全栈 + 全 mask050 ctx | 0.733222 | -0.014 | mask050 直接替 baseline 更伤 |
+
+D1 > D3 +0.009 (路由有部分价值) 但都跌 S5.
+
+**对比 V1/V2 ctx-only**:
+- V1 (ctx-only single baseline) = 0.710789
+- V2 (ctx-only dual-route) = 0.720935 → ctx-only 涨 **+0.010**
+- 但 R4 全栈下 D1 vs D2 = **-0.005** → **方向反过来**
+
+**根因 (跟 D-28 mask 公榜反向 4x 同形)**:
+1. **单源 ctx-only ≠ R4 全栈 softadd 放大**. ctx 在 mask050 路由段 prob 分布跟 baseline 不同, R4 内部 src (wsp/hub/wsp_ms/e2v_ms/hub_ms/omni3b) 跟 ctx 的协同关系被破坏. ctx-only "小好" +0.010 → 全栈 "大坏" -0.005.
+2. **D-29 同机理重演**: D-29 是"在 S5 上加新 src 软加全否" — 这次是"换 ctx 源"也算变更 R4 内部协同, 同样塌. R4 + omni3b 0.05 配方已饱和当前素材池的有效信号维度, **任何改 R4 内部源的 prob 分布都伤**.
+
+**复赛镜像决策修正 (D-28 → D-30)**:
+| 组件 | D-28 方案 | D-30 修正 |
+|---|---|---|
+| 主力模型 | S5 (R4 + omni3b 0.05) | **S5 保持** ✓ |
+| ctx 训练 | dual-model fallback (baseline + mask050) | **❌ 单 baseline ctx ckpt** (variant-F 5 seed te_lgbm_v1) |
+| 短 ctx 退化处理 | dual-ckpt 路由 θ=20s | **normalize_ctx_to_375 左 pad NA** (单 ckpt 直接喂, 不路由) |
+| mask050 ckpt | 复赛镜像必带 | **不带** (D1/D3 公榜证伪) |
+| dual-model 推理代码 | sprint 1 写好待用 | **保留代码但默认关闭** (--ckpt_dir_short 为空走单 ckpt) |
+
+**关闭路线**:
+- ❌ dual-model fallback 在 R4 全栈下用 (D-30 证伪)
+- ❌ mask050 ckpt 进复赛镜像 (D-30 全 mask050 = -0.014 更差)
+- ❌ "ctx-only V2 +0.010 经 softadd 进 R4 估 +0.005-0.015" 假设 (D-30 实测 -0.005)
+
+**保留**:
+- ✅ src/infer.py dual-ckpt 路由代码 (sprint 1 写的, 默认关闭, 留作答辩素材 + 万一未来需要)
+- ✅ models/ctx_only_mask050/ ckpt (不删, 留作答辩 sweep 矩阵素材)
+- ✅ V1/V2/D1/D2/D3 5 个公榜真分 (D-28→D-30 完整学习链, 答辩"评估错配"金料 — V2 ctx-only +0.010 但 R4 全栈反向 = 现场可讲)
+
+**结论**:
+- **复赛镜像配方锁定**: R4 (orthofuse-3src + wsp_ms 0.07 + e2v_ms 0.03 + hub_ms 0.03) + omni3b_ms2 0.05 = **S5 = 0.747131**
+- **ctx 源**: variant-F 5 seed te_lgbm_v1 (跟 R4 baseline 0.7458 严格同源)
+- **复赛短 ctx 应对**: normalize_ctx_to_375 左 pad NA (cycle_context.py 推理逻辑), 单 ckpt 直接喂
+- **冲 #1 路线**: 现有素材池靠"再加 src 软加" / "改 R4 内部源"都关闭 (D-29 + D-30). 必须**新训练**才有突破口
+
+**流程教训**:
+1. **ctx-only 涨 ≠ R4 全栈涨, 必须 R4 全栈公榜直接验**. 不要再从 ctx-only 信号外推到 R4 全栈 (D-28 / D-30 两次教训, "softadd 放大效应"是 R4 全栈架构的本质特性, 任何源改动都需公榜直接验, 不靠估算)
+2. **D2 sanity 投得对了**: 用户实际投了 D2 (六位精度命中 S5), 这种 sanity 验证看似浪费配额, 但它**证实工件链完全可信**, 消除"是不是我代码哪写错才 -0.005"的疑虑 — D1 = -0.005 是真信号不是 bug
+3. **公榜配额对"决策性问题"投资极高**: 这次 3 push (D1/D2/D3) 直接闭环 dual-model 路线, 比再 push 几个 day8/day9 软加变体的信息量大 10 倍

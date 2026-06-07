@@ -2,7 +2,7 @@
 
 > 结构快照：架构 / 关键文件 / 焦点。**不写** session 级进度/下一步（归 RESUME）。
 
-**Last updated:** 2026-06-06（D-28 mask sweep 教训 + dual-model 战略 + T4 docker 骨架 + S5 NEW SOTA 0.747131 公榜合规第 3 / 总第 2 (P5 8B 超额 alt-id)）
+**Last updated:** 2026-06-07（D-30 dual-model 在 R4 全栈下证伪 → 复赛镜像锁 S5 单 baseline ctx, S5 = 0.747131 D2 sanity 六位精度复现）
 
 ## 任务
 
@@ -18,7 +18,7 @@
 - 6/16 初赛结束剩 10 天 × 5 = 50 push 配额; 6/10 前合规报备截止
 - T1-T5 任务清单见 `docs/finals/FINAL-PUSH-TASKS.md`
 
-## 当前阶段：D-22 软加范式 + D-25 双 SSL 协同 + D-26 复赛动态时长 + D-27 战略降速 + D-28 mask 教训 + dual-model
+## 当前阶段：D-22 软加范式 + D-25 双 SSL 协同 + D-26 复赛动态时长 + D-27 战略降速 + D-28 mask 教训 + D-29 单源叠加路线终结 + D-30 dual-model R4 全栈证伪 → 复赛镜像锁 S5 单 baseline ctx
 
 **SOTA 梯队 (6/6 更新)**:
 - **P5 = R4 + omni7b_ms2 0.05 = 0.747569 公榜总第 2 (SpeechlessAI alt-id)** (9B 超 8B, 仅 +0.0004 vs S5 = 噪声, **不进复赛**, 答辩"7B→3B free lunch"金料)
@@ -30,11 +30,21 @@
 - 合规 SOTA-3src base = 0.71755 (5/31, ctx + whisper + hubert 正交融合)
 - 复赛镜像 5 候选已就位 `submission/finals-20260604/{R1,R3,R4,R5,R6}/` + 6/6 day8 候选 `submission/probe-day8-20260606-0115/{P1-P5}/`
 
-**D-28 mask sweep 教训 + dual-model 战略 (6/6)**:
-- 本机 sweep 在 30s 上选 mask=0.4 最优, 公榜实测跌 -0.021 = **完全反向**
-- 根因: ① 单源 ctx-only ≠ R4 全栈 softadd 放大 (ctx-only -0.005 → 全栈 -0.018, 4x) ② sweep 评估通分布 ≠ 公榜测试分布
-- 单一 mask 任何 prob 公榜均匀都比 baseline 差 -0.001~-0.005 → 路线废
-- **dual-model fallback**: 长 ctx 用 baseline + 短 ctx 用 mask050, 估真分 0.7417 = +0.009 vs 单一 mask
+**D-30 dual-model R4 全栈证伪 (6/7)**:
+- D2 R4 全栈 sanity (ctx 全 baseline) = **0.747131 六位精度等于 S5** → 工件链 100% 正确
+- D1 R4 全栈 + dual-route ctx = 0.742064 = **-0.005 vs S5** → dual-route 在 R4 全栈下**反向**
+- D3 R4 全栈 + 全 mask050 ctx (不路由) = 0.733222 = **-0.014 vs S5** → mask050 直接替 baseline 更伤
+- ctx-only V2 +0.010 经 softadd 进 R4 反向 -0.005 = **D-28 4x 反向放大同形重演**
+- **复赛镜像决策**: ctx 用单 baseline ckpt + normalize_ctx_to_375 左 pad NA, 不上 mask050, 不上路由
+
+**D-29 单源软加叠加路线终结 (6/7 凌晨)**:
+- 在 S5/R4 上加任何新 src 软加全否 (wsp/e2v/omni7b 0.03/0.05/qwen17b 全 -0.001 ~ -0.011)
+- 现有素材池冲 #1 走线性叠加路 已关闭, 真要冲 #1 必须新训练 / 改 R4 内部源
+- 配额降速: 公榜 push 留到新训练完才用
+
+**D-28 mask sweep 教训 (6/6, 历史)**:
+- 本机 sweep 在 30s 上选 mask=0.4 最优, 公榜实测跌 -0.021 = 完全反向
+- 根因: ① 单源 ctx-only ≠ R4 全栈 softadd 放大 ② sweep 评估通分布 ≠ 公榜测试分布
 - 教训: **本机评估只能定性, 选超参必须公榜验证**
 
 **D-22 核心范式转向**:
@@ -100,7 +110,7 @@
 
 | 路径 | 作用 |
 |---|---|
-| `docs/status/DECISIONS.md` | D-1~D-22 完整决策链（D-22 范式反转） |
+| `docs/status/DECISIONS.md` | D-1~D-30 完整决策链（D-22 范式反转 → D-29 单源叠加终结 → D-30 dual-model R4 证伪） |
 | `docs/plans/2026-05-27-finvcup-turn-taking-CONTEXT.md` | discuss 阶段决策契约 |
 | `docs/plans/2026-06-02-omni-lora-RESEARCH.md` | Omni-7B Thinker LoRA research（Context7+WebFetch 双源） |
 
