@@ -1,0 +1,24 @@
+{
+  "name": "S5_keep125_10s",
+  "keep_chunks": 125,
+  "keep_seconds": 10.0,
+  "recipe": "S5 = R4 + omni3b_ms2 0.05 T/BC/I",
+  "hypothesis": "Cross-context S5 at 10.0s ctx — real-degradation data for finals",
+  "pos": {
+    "c": 920,
+    "na": 996,
+    "i": 49,
+    "bc": 10,
+    "t": 528
+  },
+  "reference_s5_full": {
+    "true_score": 0.747131,
+    "pos": {
+      "c": 975,
+      "na": 947,
+      "i": 80,
+      "bc": 14,
+      "t": 526
+    }
+  }
+}

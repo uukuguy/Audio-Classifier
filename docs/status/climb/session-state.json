@@ -1,42 +1,13 @@
 {
   "_schema_version": 1,
-  "session_id": "2026-06-02-d22-softadd-paradigm",
-  "phase": "D-22 范式反转后. NEW SOTA 0.72852 (Omni-7B 软加 0.2, 9.4B 超 8B). 合规 SOTA 0.71755 (3src). 冲前 20 (门槛 0.7256), 前 10 (~0.748). 剩 8 天 × 5 push = 40 push 配额. 6/10 前定基础模型.",
-  "last_cycle": 24,
-  "best_online": 0.72852,
-  "compliant_best_online": 0.71755,
+  "session_id": "2026-06-07-d30-climb-resume",
+  "phase": "D-30 dual-model R4 全栈证伪 → 复赛镜像锁 S5 单 baseline ctx. S5=0.747131 合规 SOTA, 公榜 #3, 距 #1 +0.0076. 剩 9 天 × 5 = 45 push 配额. 战略: 复赛准备最优 + 公榜信息收集.",
+  "last_cycle": 40,
+  "best_online": 0.747569,
+  "compliant_best_online": 0.747131,
   "in_flight": {
-    "task": "无 (Omni-3B 23:24 完成, heartbeat 自动退出. 5 push 候选全就位)",
-    "next_action": "用户 6/3 提交 5 push 后贴真分回来, 跑 tools/climb/calibrate_push_results.py --scores S1 S2 S3 S4 S5"
+    "task": "Cycle 25: Cross-context S5 probe (cross-ctx degradation on real LB)",
+    "next_action": "build S5 truncated variants keep=125/63 + push 2"
   },
-  "omni3b_result": {
-    "run_dir": "tools/runs/climb/omni3b-lora-20260602-2147",
-    "cap1": 0.625,
-    "per_sub": {"C": 0.974, "T": 0.620, "BC": 0.182, "I": 0.487, "NA": 0.863},
-    "train_minutes": 87.6,
-    "vs_omni7b_v4": "cap1 +0.060 vs 7B 0.5649, 但软加 OOF 不及 7B (Omni-3B 0.20 OOF -0.003 vs 7B 0.20 OOF -0.003 同水平). Push 候选 ✓"
-  },
-  "completed_today": [
-    {"time": "06:59", "task": "Omni-7B Thinker LoRA v1-v4 (4h 调试)", "result": "v4 fold 4 crash → resume → 完成. cap1=0.5649 单源弱 D-20"},
-    {"time": "14:12", "task": "5 push 配额: cand1-5", "result": "cand2 SOTA+Omni 0.2 真分 0.72852 NEW SOTA D-22 范式反转"},
-    {"time": "15:05", "task": "4heads multi-seed retrain (PID 3434)", "result": "ALL 4 HEADS DONE 20:31. hubert +0.007 / w2v2 +0.020 / e2v +0.003 / whisper +0.018 cap1 真涨"},
-    {"time": "18:00", "task": "build_softadd_candidates_v2 + OOF 打分 (29 候选)", "result": "Top1 C_omni020+e2v_ms_w010 OOF +0.0066"},
-    {"time": "21:39", "task": "Omni-3B 启动 1st crash", "result": "shape mismatch (HIDDEN_SIZE 写死 7B 3584), heartbeat 即时抓到"},
-    {"time": "21:46", "task": "修 train_omni_head.py HIDDEN_SIZE 动态读 config.json", "result": "上云 + 重启 OK"},
-    {"time": "22:30", "task": "perfold_softadd_scan (15 per-fold/per-ckpt 候选)", "result": "PF_omni_max_w020 BC=26 I=92 T=540 接近 SOTA pos"},
-    {"time": "22:45", "task": "RECOMMEND v3 (Push 5 替换 → PF_omni_max_w020)", "result": "5 push 维度覆盖 A×2 + B×1 + C×1 + D×1"},
-    {"time": "22:50", "task": "per_seed_test_compare 分析", "result": "whisper seed=1 dist=26 最强 (vs mean dist=45), 但 BC=8 不能单独 push"}
-  ],
-  "best_online_route": "probe-5push-cand2-omni020-20260602-1412 = 0.72852 (Omni-7B Thinker LoRA + SOTA-3src 软加 0.2 T/BC/I)",
-  "pending_lb": [
-    {"name": "6/3 5 push 待用户提交", "csvs": [
-      "tools/runs/climb/probe-softadd-v2-20260602-2210/A_omni_w010_TBCI/pred_test1.csv",
-      "tools/runs/climb/probe-softadd-v2-20260602-2210/C_omni020+e2v_ms_w010/pred_test1.csv",
-      "tools/runs/climb/probe-softadd-v2-20260602-2210/B_e2v_ms_w020_TBCI/pred_test1.csv",
-      "tools/runs/climb/probe-softadd-v2-20260602-2210/A_omni_w015_TBCI/pred_test1.csv",
-      "tools/runs/climb/perfold-scan-20260602-2230/PF_omni_max_w020/pred_test1.csv"
-    ]}
-  ],
-  "next_session_first_action": "1) 查 Omni-3B 完成情况 2) scp probs 回本机 3) 重生 v3 候选包加 Omni-3B 4) 用户 6/3 5 push 真分回来后跑 calibrate_push_results.py",
-  "last_updated": "2026-06-02T22:55:00"
+  "last_updated": "2026-06-07T16:30:00"
 }
