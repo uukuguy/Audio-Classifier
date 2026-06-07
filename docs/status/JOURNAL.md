@@ -562,3 +562,4 @@
 - 13:02 fast spw 修复版起跑 (nohup pid 44334, OMP=4)
 - 13:08 mask050-fast 训完 (10 min 总耗): pos full c=982 na=948 i=69 bc=28 t=513 / pos v2 c=982 na=972 i=55 bc=27 t=514 (跟 V2 ctx-only c=980/na=976/i=56/bc=21/t=507 几乎重合 = 同纲 ✓)
 - 13:09 build_r4_dual_ctx_v2 跑通: D2 sanity pos = 975/947/80/15/528 精确复现 R4 baseline ✓; D1 dual pos=980/970/73/13/528 (Δ vs S5: na+23 i-7 bc-2 c+5); D3 全 mask050 pos=982/948/83/15/528 (Δ: c+7 i+3 t+0 ≈ S5). 三 csv 落 submission/probe-day9-r4dualv2-20260607-1308/, 押"V2 ctx +0.010 经 softadd 进 R4 估 +0.005-0.015"
+- 13:12 commit D1/D2/D3 + mask050-fast + r4_dual_v2 工具链 (8 文件) [29c0238]

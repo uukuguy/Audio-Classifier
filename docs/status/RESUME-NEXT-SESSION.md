@@ -1,19 +1,25 @@
 # Next-Session Handoff
 
-**Updated:** 2026-06-07 01:45 (day9 押风险博 #1 失败 → D-29 单源叠加路线终结 + mask050 训完 3min + V1/V2 出件就绪投)
+**Updated:** 2026-06-07 13:15 (V1/V2 真分回 → R4 全栈 dual-route ctx 3 候选就绪 D1/D2/D3)
 **恢复命令:** `/project-state resume`
 
 ## TL;DR (4 句)
 
-1. **🔴 D-29 路线终结**: 在 S5/R4 上线性叠加任何新 src 软加都跌 (wsp/e2v/omni7b 0.03 or 0.05/qwen17b 全 -0.001 ~ -0.011, 6/7 A=0.7462 / B=0.7415). **现有素材池冲 #1 走线性叠加路 已关闭**. 真要冲 #1 必须改 R4 内部某个源 (换更强 hub_ms/e2v_ms/ctx base), 不再单纯软加. 接受 #2/#3 公榜位, 复赛准备压倒.
-2. **✅ mask050 ckpt 训完 (commit 8e85a9f, 6/7 01:33)**: 本机 OMP=4 仅 3 分钟 (RESUME 估 5-8h 严重高估). OOF=0.5901, 7 文件落 `models/ctx_only_mask050/`. V1/V2 验证 csv 同步落盘到 `submission/dual-model-validation-20260607-0135/`. V1 sanity LF-binary 等同 single-ckpt baseline csv → 路由不破 ✓.
-3. **📤 下次 session 第一动作 = 用户提 V1 + V2 公榜验路由**:
-   - V1 全 30s sanity → 估真分 0.7458 (验路由实现不破 baseline)
-   - V2 一半 10s 一半 30s → 估真分 0.730-0.745 (验 dual-model 在动态长度上真改善)
-   - V1 真分 ≠ 0.7458 → 路由实现有 bug 修
-   - V2 < V1 → mask050 路线本身证伪
-   - 两者通过 → 进 A3 (R4 全栈 ctx 源升级 dual-ckpt 路由)
-4. **⏰ T5 报备邮件 6/8 21:00 截止 (剩 ~43h)**: 草稿就绪 `docs/finals/T5-disclosure-email-draft.md`, 队名 SpeechlessAI, 用户用 531045572@qq.com 发到 xinyebei@xinye.com.
+1. **✅ V1/V2 公榜真分回完, dual-model 路线公榜实证**: V1 (全 30s) = 0.710789 = 5/27 cycle1 一字不差 → 路由实现 100% 正确; V2 (一半 10s 一半 30s) = 0.720935 = **+0.010 vs V1** → dual-model 在动态长度上首次公榜实证.
+2. **🎯 R4 全栈 dual-route 3 候选已就位 (commit 29c0238, 13:08)**: `submission/probe-day9-r4dualv2-20260607-1308/{D1,D2,D3}/`. D2 sanity 已精确复现 R4 baseline pos 975/947/80/15/528. D1 真候选 押"V2 ctx +0.010 经 softadd 进 R4 估 +0.005-0.015 = 0.750-0.760". D3 全 mask050 不路由对照看路由价值.
+3. **📤 下次 session 用户立即投 D1 + D3** (D2 sanity 可省): D1 真分回完判 dual-route 在 R4 全栈下真增益; D1 > D3 + 0.005 → 复赛镜像走 dual-ckpt, D1 ≈ D3 → mask050 直接替 baseline 即可不需路由.
+4. **⏰ T5 报备邮件 6/8 21:00 截止 (剩 ~32h)**: 草稿就绪 `docs/finals/T5-disclosure-email-draft.md`, 队名 SpeechlessAI, 用户用 531045572@qq.com 发到 xinyebei@xinye.com.
+
+## 关键工件链 (V1/V2 → D1/D2/D3 严格同纲)
+
+| 层 | 工件 | 期望真分 | 实际真分 |
+|---|---|---|---|
+| baseline ctx-only single | `models/ctx_only/` (cycle1) | — | V1 = 0.710789 ✓ |
+| dual-route ctx-only | V1 sanity / V2 截短 | V1=baseline / V2=+0.010 | V1=0.710789 / V2=0.720935 ✓ |
+| **R4 全栈 baseline** | S5 = 0.747131 (anchor) | — | 0.747131 (6/5) |
+| **R4 全栈 + dual ctx 真候选** | D1 | **0.750-0.760 (押 +0.005-0.015)** | **⏳ 待投** |
+| R4 全栈 + 全 mask050 ctx (不路由) | D3 | 0.737-0.755 (押 ≈ S5) | **⏳ 待投** |
+| R4 全栈 sanity (全 baseline ctx) | D2 | = 0.7458 | **可省** (pos 已精确复现) |
 
 ## 6/6 全部 9 push 真分账本
 
@@ -65,24 +71,25 @@
 # 1. resume
 /project-state resume
 
-# 2. 用户立即提交 (V1/V2 已就位):
-#    ① T5 报备邮件 (6/8 21:00 截止 = 剩 ~43h, 用户操作 30 min)
+# 2. 用户立即提交 (R4 dual 3 候选已就位):
+#    ① T5 报备邮件 (6/8 21:00 截止 = 剩 ~32h, 用户操作 30 min)
 #        草稿: docs/finals/T5-disclosure-email-draft.md (队名 SpeechlessAI 已填)
 #        用 531045572@qq.com 发, 收件 xinyebei@xinye.com
-#    ② V1 公榜投 (验路由实现不破 baseline, 估真分 0.7458 ± 0.001)
-#        submission/dual-model-validation-20260607-0135/V1_full_30s_sanity/pred_test1.csv
-#    ③ V2 公榜投 (验 dual-model 在动态长度上真实改善, 估真分 0.730-0.745)
-#        submission/dual-model-validation-20260607-0135/V2_half_truncated_to_10s/pred_test1.csv
+#    ② 🎯 D1 公榜投 (R4 全栈 dual-route 真信号, 押 +0.005-0.015 vs S5)
+#        submission/probe-day9-r4dualv2-20260607-1308/D1_R4_dual_half_truncated/pred_test1.csv
+#    ③ D3 公榜投 (R4 全栈 + 全 mask050 不路由, 对照看路由价值)
+#        submission/probe-day9-r4dualv2-20260607-1308/D3_R4_all_mask050_30s/pred_test1.csv
+#    ④ D2 sanity 可省 (pos 已精确复现 R4 baseline 975/947/80/15/528)
 #
-# 3. V1/V2 真分回来后:
-#    - V1 ≈ 0.7458 ✓ + V2 > V1 → dual-model 工作, 进 A3 R4 全栈升级
-#    - V1 ≠ 0.7458 → 路由实现有 bug, 修 src/infer.py
-#    - V2 < V1 → mask050 在 10s 上比 baseline 还差, dual-model 路线证伪
+# 3. D1/D3 真分回来后判:
+#    - D1 > D3 + 0.005 → 路由真有价值, 复赛镜像走 dual-ckpt ctx
+#    - D1 ≈ D3 (±0.003) → 路由价值 ≈ 0, mask050 直接换 baseline 更省工程
+#    - D1 < 0.740 (远低于 S5 0.7458) → dual-route 在 R4 全栈下反向 (D-28 类), 弃
 #
-# 4. 平行可做 (不阻塞 V1/V2 公榜回分):
-#    ④ A3 R4 全栈 docker 升级骨架 (S5 配方 + softadd + dual-ckpt 路由)
-#    ⑤ 答辩素材落 finals/ (sweep 矩阵 + 公榜反向 + 7B/3B 对照 + D-29 路线终结)
-#    ⑥ 复赛镜像下一突破方向: 改 R4 内部某个源 (换更强 hub_ms / e2v_ms / ctx base 重训) — 看素材池有什么没榨干
+# 4. 平行可做 (不阻塞 D1/D3 公榜回分):
+#    ⑤ A3 R4 全栈 docker 升级骨架 (S5 配方 + softadd + dual-ckpt 路由, 按 D1/D3 结论定)
+#    ⑥ 答辩素材落 finals/ (V1/V2 dual-model 公榜实证 + D-29 路线终结 + 7B/3B 对照)
+#    ⑦ 复赛镜像下一突破方向: 改 R4 内部某个源 (新 hub_ms / e2v_ms / ctx base 重训) — 见 D-29
 ```
 
 ## 路由阈值已锁 θ=20s (250 chunk, D-28 策略 A 保守)
@@ -91,8 +98,8 @@
 
 ## Open Questions (待用户决策)
 
-1. **V1/V2 用哪个账号投?** V1/V2 是 ctx-only 路由验证 (不是 R4 全栈), 估真分 0.73-0.745 量级, 远低于 S5 0.747. 主账号 (公榜会暂时掉 #3 → ?) vs SpeechlessAI alt-id (不影响合规排位). 推荐用 alt-id 投, 不动主账号合规位.
-2. **6/7 主账号剩 3 push 怎么用?** D-29 后"再加 src 软加"路线关; 现有素材池无新方向. 选项: (a) 不投, 配额留到下个素材变化点; (b) 投 V1/V2 主账号验路由 (但跌名次).
+1. **D1/D3 用哪个账号投?** D1/D3 是 R4 全栈, 估真分 0.737-0.760 区间, 押 D1 可能涨过 S5. 主账号 (D1 涨 → 涨名次, D1 跌 → 跌名次) vs SpeechlessAI alt-id (不影响合规位). **推荐主账号投** — D1 是真候选, 涨了就锁第 2.
+2. **D2 sanity 要不要投?** pos 已精确复现 R4 baseline pos=975/947/80/15/528, sanity 在本机已通过. 投 D2 = 浪费 1 push 配额验已确定的事. 推荐**不投 D2**.
 
 ## Ready-to-paste commands
 
@@ -150,12 +157,15 @@ cat submission/probe-day8-20260606-0115/MANIFEST.json | python3 -m json.tool | h
 - ❌ NSOTA07 单加 Omni3B 跳过双 SSL_ms (P4 -0.001, 双 SSL 是核心 +0.007)
 - ❌ 7B vs 3B 多模态升级 (仅 +0.0004 = 噪声)
 
-## 当前 git 工作树状态 (6/7 01:45)
+## 当前 git 工作树状态 (6/7 13:15)
 
-工作树**干净** (所有改动已 commit), 6/7 增量:
-- 8e85a9f: 6/7 day9 push-1 真分回完 + mask050 训完 + V1/V2 出件 (15 文件)
+工作树**干净** (除 RESUME 这一改本身), 6/7 增量:
+- 8e85a9f: day9 push-1 真分回完 + mask050 训完 + V1/V2 出件 (15 文件)
+- 1d93510: D-29 写入 + handoff 反映 V1/V2 就绪投 (3 文件)
+- ed1409b: journal 补 1d93510 hash (1 文件)
+- 29c0238: 🎯 **R4 全栈 dual-route 3 候选 D1/D2/D3 + mask050-fast + r4_dual_v2 工具** (8 文件)
 
 6/6 历史:
 - 75799ad / 84b56bf / 2d9e27d / 499d602 / 24625c3 / 6a13c16 (D-28 sprint 1 完成链)
 
-下次 session resume 后**无需先 commit**, 直接按"下次 session 第一步" → 用户发 T5 邮件 + 提 V1/V2 csv 即可.
+下次 session resume 后**无需先 commit**, 直接按"下次 session 第一步" → 用户发 T5 邮件 + 提 D1 + D3 csv 即可.
