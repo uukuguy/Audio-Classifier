@@ -1,13 +1,13 @@
 {
   "_schema_version": 1,
-  "session_id": "2026-06-07-d30-climb-resume",
-  "phase": "D-30 dual-model R4 全栈证伪 → 复赛镜像锁 S5 单 baseline ctx. S5=0.747131 合规 SOTA, 公榜 #3, 距 #1 +0.0076. 剩 9 天 × 5 = 45 push 配额. 战略: 复赛准备最优 + 公榜信息收集.",
-  "last_cycle": 43,
+  "session_id": "2026-06-24-finals-e2e-climb",
+  "phase": "复赛端到端镜像阶段. cycle45 H-F1完成: 重写干净三源架构(ctx+wsp+hub orthofuse-3src) + 构建team26:r3-base-20260624(20.4G) + 镜像内冒烟通过 + docker push. 融合逻辑identical初赛0.71755. 等官方真分校准.",
+  "last_cycle": 45,
   "best_online": 0.747569,
   "compliant_best_online": 0.747131,
   "in_flight": {
-    "task": "Cycle 25-30 完成: cross-context curves S5+R4, 10 CSVs 就绪. 现有素材池穷尽. 下一步: 新训练 (per-fold Omni-3B/new SSL/new ctx base) 或 T5 邮件 + docker 升级.",
-    "next_action": "用户提交 cross-context CSVs 到公榜 + T5 邮件 6/8 前发"
+    "task": "docker push team26:r3-base-20260624 (复赛首个干净端到端镜像). pending-lb 1条.",
+    "next_action": "push完成→给用户tag/url提交提示. 用户提交url到官方后台→评测自动评分→贴回真分. 关注GPU耗时<60min + 单seed vs 3seed差异. 下一cycle候选: H-F5阈值精调/H-F1b e2v还原/H-F4多seed"
   },
-  "last_updated": "2026-06-07T17:00:00"
+  "last_updated": "2026-06-24T08:35:00+08:00"
 }

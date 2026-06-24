@@ -1,3 +1,14 @@
 {
-  "pending": []
+  "pending": [
+    {
+      "run_id": "r3-base-20260624",
+      "tag": "finvcup-registry.cn-shanghai.cr.aliyuncs.com/finvcup/team26:r3-base-20260624",
+      "cycle": 45,
+      "hypothesis": "H-F1",
+      "paradigm": "finals-e2e-core4-orthofuse",
+      "pushed_at": "2026-06-24T08:35:00+08:00",
+      "predicted_online": "~0.715 (融合identical初赛orthofuse-3src 0.71755, 但单seed head + 端到端现场重算可能微降)",
+      "note": "复赛首个干净端到端镜像. 待用户提交url到官方后台→评测自动评分→贴回真分校准. 关注: GPU耗时<60min确认 + 单seed vs 初赛3seed mean差异"
+    }
+  ]
 }

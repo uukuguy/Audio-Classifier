@@ -442,3 +442,94 @@ hypotheses:
     created_at: 2026-06-02T22:00:00
     results: []
     note: "用户 6/2 战略: per-fold ckpt 各自融合是新维度. 5 个独立 push 候选 (但占配额), 或先 OOF cap1 排序选最强 fold 软加"
+
+# ============================================================
+# F 系列 = 复赛端到端镜像阶段 (Finals, 2026-06-24 启动)
+# paradigm = 端到端镜像配方; push = auto-docker-build (climb构建+冒烟+push, 用户提交url)
+# 验证 = 本机端到端冒烟(data/test 1000段)代替初赛CV; 真分=官方评测环境
+# ============================================================
+
+  - id: H-F1
+    description: "干净端到端架构 + 核心三源(ctx×wsp×hub orthofuse-3src), 本机端到端冒烟跑通跑对 → 第一个可信镜像基线"
+    parent_paradigm: finals-e2e-core4-orthofuse
+    expected_lift: "锁定真实基线 (融合identical初赛orthofuse-3src 0.71755)"
+    cost_h: 2
+    ranking: 0.95
+    status: pending-lb  # 已实现+构建+push team26:r3-base-20260624, 等官方真分
+    created_at: 2026-06-24T05:40:00
+    results:
+      - cycle: 44
+        date: 2026-06-24
+        finding: "本机端到端冒烟(5段)跑通但暴露2断点: (1)MODELS默认/app/models需本机覆盖 (2)严重: e2v用WavLMModel加载但初赛用funasr.AutoModel提特征→架构全不匹配→e2v随机初始化假跑+Dockerfile没装funasr. 当前四源里e2v无效贡献"
+        verdict: "诊断进行中, 需还原e2v正确加载(funasr)或重训e2v head, 再锁基线"
+      - cycle: 44b
+        date: 2026-06-24
+        finding: "MPS耗时实测: 20段375s=18.75s/段(30s满长,含模型加载), 1000段估312.5min(MPS上界,远超60min). 评测4090 GPU fp16估快15-30x→~10-20min<60min"
+        verdict: "GPU路径下60min可行(待镜像构建后GPU实测坐实, whisper-large-v3是耗时大头, 私有测试集规模未知按最坏估)"
+    note: "用户决策: 先锁三源(ctx+wsp+hub)基线, e2v→H-F1b独立cycle; 先给设计方案(已出 docs/status/2026-06-24-镜像架构设计-H-F1F2.md)过目再实现。不受v2约束重新组织。本机 data/test 1000段冒烟: 4源各正常出概率 + 融合 + 出submit.csv + 耗时<60min。6/22云端head已同步本机(wsp/hub/e2v model.pt + ctx 5lgbm)。这是F系列地基, 必先做。"
+
+  - id: H-F2
+    description: "镜像工程修复: pynvml + Dockerfile唯一源 + 瘦身COPY + tag规范 + 删infer_entry.sh冗余"
+    parent_paradigm: finals-image-hygiene
+    expected_lift: "0 分变化, 但解决官方硬要求(pynvml)+ 可维护性 + 镜像瘦身(去tools/cloud)"
+    cost_h: 1
+    ranking: 0.90
+    status: pending
+    created_at: 2026-06-24T05:40:00
+    results: []
+    note: "缺pynvml=官方硬要求可能评测失败。5份Dockerfile散落→唯一源Dockerfile.finals。COPY整个tools+cloud→只COPY必需。与H-F1同批落地。"
+
+  - id: H-F3
+    description: "变长(5-30s)端到端正确性验证: featurize_variable_length + normalize_ctx_to_375 在不定长ctx上跑通"
+    parent_paradigm: finals-varlen
+    expected_lift: "保证私有测试集2(5-30s不定长)不崩 + 不退化(初赛D-26~D-31已研变长退化曲线)"
+    cost_h: 1
+    ranking: 0.85
+    status: pending
+    created_at: 2026-06-24T05:40:00
+    results: []
+    note: "初赛已预研: v1→v2 +0.028来自featurize_variable_length。本机模拟5-30s不定长ctx冒烟, 确认各源端到端不崩。dynamic_ctx_utils.py现成。"
+
+  - id: H-F4
+    description: "per-class正交融合还原初赛orthofuse配方 (当前fuse_s5是硬编码简化加权)"
+    parent_paradigm: finals-orthofuse
+    expected_lift: "+? 对齐初赛真SOTA融合 (orthofuse per-class跨源正交 vs 当前简单加权)"
+    cost_h: 1.5
+    ranking: 0.70
+    status: pending
+    created_at: 2026-06-24T05:40:00
+    results: []
+    note: "初赛SOTA核心=cycle_orthofuse.py per-class跨源正交融合。当前镜像fuse_s5是env权重简单加权, 可能丢了orthofuse增益。H-F1基线后对照。"
+
+  - id: H-F5
+    description: "阈值还原: 当前THR硬编码偏离初赛thresholds.json (NA 0.05→0.25, BC 0.5→0.75, I 0.5→0.65)"
+    parent_paradigm: finals-threshold
+    expected_lift: "+? NA是第二大类(30%), 阈值0.05→0.25大量砍NA正例→NA F1崩 (违阈值铁律)"
+    cost_h: 0.5
+    ranking: 0.75
+    status: pending
+    created_at: 2026-06-24T05:40:00
+    results: []
+    note: "infer_full.py硬编码THR=[0.05,0.50,0.75,0.65,0.25] vs ctx_only/thresholds.json={c0.05,t0.5,bc0.5,i0.5,na0.05}。且infer_context读了thrs但main没用。还原到初赛验证过的阈值。低成本高ROI。"
+
+  - id: H-F6
+    description: "(条件性,基线后)按ROI加源: Omni-3B / qwen2audio / wavlm / qwen3文本头"
+    parent_paradigm: finals-add-source
+    expected_lift: "Omni +0.0004(微+占8B大半) / 新异质源未知, 需查初赛离线融合贡献"
+    cost_h: 3
+    ranking: 0.40
+    status: pending
+    created_at: 2026-06-24T05:40:00
+    results: []
+    note: "核心四源基线锁定后才议。Omni收益微暂不进。评测有GPU→重encoder可进但60min约束。云端备选池: qwen2audio-head/wavlm-head/qwen3-4b文本头/Omni-3B&7B LoRA。"
+
+  - id: H-F1b
+    description: "e2v源还原: WavLMModel→funasr.AutoModel加载 + Dockerfile装funasr, 验证e2v真实增益值不值funasr重依赖"
+    parent_paradigm: finals-e2e-core4
+    expected_lift: "e2v初赛融合权重0.03(边际源). 修复后验证端到端真增益; 若<noise则砍, 三源即主配方"
+    cost_h: 2
+    ranking: 0.50
+    status: pending
+    created_at: 2026-06-24T07:12:00
+    results: []
+    note: "从H-F1冒烟拆出(用户决策: 先锁三源基线, e2v独立cycle). 当前infer_full.py:121用WavLM加载emotion2vec→随机初始化假跑. 初赛extract_emotion2vec_cuda.py用funasr.AutoModel(granularity=frame). 修复需funasr CUDA适配, 风险中. 基线后做."

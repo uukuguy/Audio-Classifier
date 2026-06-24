@@ -1240,3 +1240,25 @@ D1 > D3 +0.009 (路由有部分价值) 但都跌 S5.
 **教训**:
 - 信息收集型 push 极高 ROI: 4 push (S5×3 + R4×1) 产出了可讲 3 页 PPT 的完整退化曲线 + cross-model 鲁棒性对比
 - pos 级扫描对现有素材池已达到信息上限 (所有变化 ≤4), 继续扫描浪费算力
+
+---
+
+## D-32 复赛端到端镜像: 三源干净架构 + 初赛 orthofuse-3src 配方 (2026-06-24)
+
+**背景**: 复赛=镜像端到端评分(挂私有测试集2 5-30s不定长→run.sh→submit.csv), 跟初赛离线拼probs.npz根本不同。opencode阶段v2镜像跑通管道(GPU优先+CPU fallback)但配方"现配简配"(0.488)且e2v假跑。
+
+**决策**: 不受v2约束, 重写干净分层架构 (src/common + src/sources/{context,ssl_encoder,fusion} + src/infer_e2e), 端到端现场重算三源(ctx+wsp+hub), 套用初赛orthofuse-3src per-class配方。
+
+**配方 (初赛 orthofuse-3src 真分 0.71755, cv_metrics.json + build_5submissions.py:96)**:
+- C=ctx / T=0.7·wsp+0.3·hub / BC=ctx / I=(ctx+wsp+hub)/3 / NA=ctx
+- 验证: 新fusion.py喂初赛缓存probs → identical复现0.71755的test数组 (max diff 1e-7)
+
+**关键决策点**:
+1. **阈值用 THR_VARF={C0.05,T0.50,BC0.75,I0.65,NA0.25}, 不用 thresholds.json**。THR_VARF是【融合后】SOTA阈值(0.71755验证), thresholds.json是【ctx-only阶段】阈值。两套对应不同阶段, 融合后必用THR_VARF。(纠正设计文档初稿误判, 呼应阈值铁律: 用验证过的值不臆调)
+2. **e2v砍出基线** (D-33): 当前WavLM加载funasr权重→假跑, 修复需funasr重依赖, 权重仅0.03边际源 → H-F1b独立验证值不值。三源即基线主配方。
+3. **Omni不进**: 11G+CPU超时+仅+0.0004。
+4. **单seed head** (6/22重训) vs 初赛3-seed mean: 用户"不靠多seed", 可能损失少量分, 真分回答。
+
+**产物**: team26:r3-base-20260624 (20.4G<32G). 待push+官方评分校准。
+
+**风险**: 单seed vs 3-seed mean差异 / 私有测试集5-30s变长(featurize_variable_length已适配, 初赛D-26~D-31验证) / GPU 60min(MPS 312min上界, GPU估10-20min, 须评测坐实)。

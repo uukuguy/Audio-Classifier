@@ -582,3 +582,49 @@
 - 17:20 D-31 写入: cross-context 信息收集完成, S5/R4 退化斜率相同 (Omni 不提供跨 ctx 鲁棒性), T 不变, 现有素材池穷尽, 启动新训练阶段
 - 17:25 **新训练路线**: P0 Omni-3B per-fold (脚本 `cloud/predict_omni_per_fold.py` 就绪, 30min), P1 SSL multi-seed 5x, P2 新 SSL encoder. 所有云实例已关机
 - 17:30 project-state 完整收口: CURRENT-STATE + DECISIONS D-31 + JOURNAL + RESUME 全更新, 新 session 可 resume 恢复
+
+## 2026-06-24 (复赛端到端阶段 resume — 接回 opencode/deepseek 断档)
+
+> ⚠️ 6/7~6/24 复赛镜像管道工作由 opencode/deepseek 完成, JOURNAL 未记 → 本组条目重建延续性。
+- 05:00 resume: 发现状态断档 — RESUME(6/24 复赛Docker) vs CURRENT-STATE/climb(6/7 初赛收口)分属两阶段
+- 05:05 读官方复赛指引PDF: 评测=镜像端到端(挂私有测试集2 5-30s不定长→run.sh→submit.csv), 约束 60min/8B/32G/每天2次, 阶段一截止 7/9
+- 05:10 用户校正认知: v2=0.488 价值在"管道跑通"(GPU优先+CPU fallback, 前6次失败后成功), 不在分数; 镜像配方"现配简配"跟初赛策略无关; 别再乱试管道
+- 05:15 核实当前镜像真配方: main() 调 ctx+wsp+hub+e2v 单seed, **infer_omni 定义但从不调用** → v3=R4简配非S5 (src/infer_full.py:254-272)
+- 05:18 核实初赛SOTA本质: S5=0.747 是离线拼 probs.npz, npz对复赛无用; 端到端需权重现场重算; multi-seed真瓶颈是encoder前向次数非seed数(enc1遍+N head mean 边际成本≈0)
+- 05:20 缺口确认: ctx/wsp/hub/e2v 各缺 seed1/seed7; Omni 11G+CPU必超时(评测期默认砍); 缺 pynvml(官方硬要求); 5份Dockerfile散落
+- 05:25 产出复赛作战图 `docs/status/2026-06-24-复赛端到端作战图.md` + INDEX登记 + CURRENT-STATE阶段切换
+
+## 2026-06-24 (climb 复赛端到端 — cycle 44 H-F1 冒烟)
+- 06:40 climb resume: push_mode 校正 manual-csv→auto-docker-build (用户: climb 构建+冒烟+docker push, 用户只提交url到后台). config 更新
+- 06:42 初始化复赛 F 系列假设池 H-F1~F6 (端到端镜像配方): F1干净四源基线/F2镜像工程/F3变长/F4 orthofuse还原/F5阈值还原/F6加源
+- 06:45 cycle44 H-F1 本机端到端冒烟(data/test 5段, MPS): 暴露2断点
+- 06:46 断点1: MODELS 默认 /app/models 硬编码 → 本机需 MODELS=$PWD/models (Docker内路径泄漏)
+- 06:50 **断点2(严重): e2v encoder 假跑** — infer_full.py:121 用 WavLMModel 加载 emotion2vec_base, 但初赛训练用 funasr.AutoModel(granularity=frame, 50Hz情感范式). 架构全不匹配→权重MISSING随机初始化→e2v输出垃圾. Dockerfile也没装funasr
+- 06:52 结论: 当前镜像v3"加回e2v"是假的, e2v源实质未生效. 印证需重新设计(H-F1)+还原正确加载. 四源里 e2v 当前无贡献
+- 07:10 cycle44 MPS计时: 20段375s=18.75s/段(30s满长+模型加载), 1000段估~313min(MPS远超60min). 评测4090 GPU估快15-30x→GPU 1000段约10-20min<60min, 但须镜像构建后GPU实测确认(whisper-large-v3是耗时大头, 私有测试集规模未知)
+- 07:12 用户决策: (1)先锁三源(ctx+wsp+hub)基线, e2v修复(还原funasr)作独立cycle H-F1b (2)重写镜像架构先给设计方案过目再动手
+- 07:12 cycle44收口: 三源加载正确, e2v假跑暂砍出基线. 下一步=产出H-F1/F2架构设计方案待用户确认
+- 07:18 ★取到初赛3源orthofuse per-class策略(cv_metrics.json): C=ctx/T=whisper_hubert_70/BC=ctx/I=ctx_whisper_hubert_eq/NA=ctx, fused cap1=0.6532(+0.0304 vs ctx). 三源=ctx+whisper+hubert正好是我们要锁的基线!
+- 07:19 ★判断更新: H-F1三源基线 + H-F4 orthofuse可合并 — 三源orthofuse就是初赛验证配方且per-class策略固定可照抄, 直接用=一步到位锁最优基线, 不用"先简化再还原". 当前镜像fuse_s5的env一刀切加权是错的(非per-class)
+
+## 2026-06-24 (cycle 45 H-F1 三源干净架构实现)
+- 08:00 重写干净分层架构: src/common.py + src/sources/{context,ssl_encoder,fusion}.py + src/infer_e2e.py (不覆盖初赛src/infer.py)
+- 08:11 三源端到端冒烟5段跑通, 无e2v MISSING报错(三源加载全正确), 输出分布合理(C/NA全正/BC/I/T零星)
+- 08:15 ★★融合逻辑100%验证: 新fusion.py喂初赛缓存ctx/wsp/hub test probs → 精确复现基准975/947/81/27/522, 与初赛z['test'] identical(max diff 1e-7). 融合+阈值零误差移植初赛orthofuse-3src(0.71755)
+- 08:16 剩余风险(真分才能答): 镜像端到端用6/22单seed head vs 初赛缓存3-seed mean, 可能损失少量分. 按climb不纠结, 构建镜像push让官方评测回答
+- 08:23 H-F2镜像工程: Dockerfile.finals三源版(去e2v/Omni层+装pynvml+只COPY src不带tools/cloud) + run.sh改python -m src.infer_e2e + 源码留档submission/docker-src/r3-base/
+- 08:25 ★docker build成功: team26:r3-base-20260624, 镜像20.4GB(<32G限). 基础镜像16G+三源模型4.1G
+- 08:27 镜像内端到端冒烟(官方命令 docker run -v /xydata -v /app/submit, CPU fallback路径)进行中
+- 08:50 ★docker push 成功: team26:r3-base-20260624 digest sha256:3dca33ec...e7f984. 复赛首个干净端到端镜像就绪. pending-lb登记. 待用户提交url到官方后台
+- (真分) r3-base-20260624 = 0.515336 ★★重大负信号: 远低于预期~0.715(对齐初赛orthofuse-3src). 差0.20 ≠ 单seed vs 3seed能解释. 链条严重断点, chain-first诊断
+- 11:05 ★chain-first诊断0.515: 现场probs vs初赛缓存对比(本机50段). ctx@375一致(0.614 vs缓存0.609✓) 但 wsp/hub现场全乱(wsp T0.295 vs缓存0.558, BC0.044 vs0.205)→本机375就崩=非变长问题, 是音频提取实现错
+- 11:08 ★定位3 bug: (1)context.py漏normalize_ctx_to_375 pad_na_left→短ctx featurize位置/占比特征(分母L)错位(实测截短100: BC+0.165/I+0.159/C+0.115) (2)ssl_encoder whisper漏h[:,-400:]取tail→对全1500帧(22s静音pad)pool稀释→wsp崩 (3)ssl_encoder ctx分支同bug1
+- 11:10 训练侧铁证: extract_whisper_cuda.py:63 tail=h[:,-TAIL_FRAMES:](400) 再pool; hubert输入即8s无需tail. 我ssl_encoder对两者都直接全帧pool→whisper错hubert碰巧对
+- 11:15 修复: context.py内联normalize_ctx_to_375(pad_na_left)+2处调用; ssl_encoder whisper加h[:,-400:] tail + ctx分支normalize. 重跑diag50验证probs对齐
+- 11:30 ★3-strike: wsp probs 对齐失败3次. (修1)tail400帧→仍不齐 (修2)段长CTX_SEC*SR16→*sr 在8kHz上切→仍不齐 (修3)head加载验证=完全匹配(0 missing/unexpected)非问题
+- 11:32 关键未知暴露: 缓存wsp_te是3-seed mean, 现场是6/22单seed head, 对比基准本就不公平; 且6/22 head(opencode训)无manifest/训练日志, 不知其提取契约 → 对照初赛缓存可能永远对不齐
+- 11:33 STOP瞎改(违反chain-first已3次). per_ckpt_test.npz有15 ckpt(3seed×5fold)单seed probs可做正确对照, 但6/22 head未必在内. 需用户决策方向: 用初赛缓存3seed确定性产物 vs 继续端到端单seed现场重算
+- 11:45 ★★诊断闭环(chain-first正解): 逐元素diff我的提取 vs 初赛extract_whisper_cuda → 段长64000(8s)/w16(128000)/tail400+pool 全identical. 我的提取代码=初赛, 没问题
+- 11:46 ★根因确认: 6/22 head(opencode训, 契约不明)才是坏的 — 喂正确特征反出错=它用了不同提取/数据训. 我的代码(提取+融合)对, head坏
+- 11:48 ★解法明确: 弃6/22 head, 用初赛验证过的 whisper-bcaug-multiseed/ckpt_seed{1,7,42}_fold{0-4}.pt(15个, 对应0.71755链路, 云端在). hub/e2v 同理找初赛验证ckpt
+- 11:50 三bug修复保留有效(tail/段长/ctx normalize 本就是初赛正确逻辑), 但单换正确head权重才是关键. 下一步: 拉初赛head ckpt到本地→端到端OOF自评F1验证→重建镜像

@@ -4,18 +4,21 @@
 score_name: Macro-F1
 score_direction: max
 subscores: [c, na, t, i, bc]          # 5 类逐类 F1（提交 CSV 列名小写，顺序同 multi_targets）
-push_mode: manual-csv                  # 公榜每天 2 次提交、手动提交 + 手动贴分
+push_mode: auto-docker-build           # 复赛端到端 (2026-06-24 用户校正): climb 构建镜像 → 本机端到端冒烟验证 → docker push (本地已login) → 登记pending+打印tag/url。用户只"提交url到官方后台", 官方自动评分, 用户贴回真分。climb不替用户点提交(§16)。
 state_dir: docs/status/climb           # climb 状态根（git-tracked — 2026-05-30 从 .claude/climb 迁出，修 fresh clone 丢状态）
 artifact_dir: tools/runs/climb         # climb 训练产物根（gitignored，per-cycle 时间戳子目录）
 run_tag_marker: -climb-                # 提交工件/ckpt 文件名含此标记区分 climb vs 手动
 paradigm_field: parent_paradigm        # 本项目 paradigm = 编码器/架构组合（非 RL 算法）
 
-# manual-csv 提交约束
+# auto-docker-build 提交约束 (复赛镜像端到端)
 submit:
-  cadence: 5/day                       # 公榜每天 5 次提交机会（5/27 用户更正）
-  csv_format: "segment_id,c,na,i,bc,t" # 列名小写，0/1
-  csv_path_glob: tools/runs/climb/*/pred_test1.csv
-  rule: "提交是用户的事，climb 不挑/不催。climb 只管自主推进产候选 CSV + 报 CV 预估，记 pending-lb。用户自行决定提交哪些、何时提交，贴回真分 climb 即校准。"
+  cadence: 2/day                       # 复赛官方: 每组每天最多 2 次提交, 评测期截止 7/9 23:59
+  registry: "finvcup-registry.cn-shanghai.cr.aliyuncs.com/finvcup/team26"
+  build_cmd: "docker build --platform linux/amd64 -f Dockerfile.finals -t <registry>:<tag> ."
+  push_cmd: "docker push <registry>:<tag>  (climb 执行, 本地已 docker login)"
+  tag_rule: "每版换 tag (见作战图 tag 规范); 同 tag 不推不同镜像; 推前先本机端到端冒烟 + cp 源码留档"
+  output: "/app/submit/submit.csv (官方评测挂私有测试集2 跑 run.sh 产)"
+  rule: "climb 自主 构建+冒烟+push, 记 pending-lb + 打印 tag/url。用户决定何时提交url到后台(每天2次配额宝贵)+贴回真分。climb 不替用户点提交。本机端到端冒烟(data/test 1000段)代替初赛CV预估, 验配方正确+耗时<60min。"
 
 # SOTA 锚点（排行榜，2026-05-27）
 sota:

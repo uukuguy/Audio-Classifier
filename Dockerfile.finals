@@ -1,0 +1,35 @@
+# FinVCup 2026 复赛端到端推理镜像 — 三源基线 (ctx + whisper + hubert)
+# 配方: orthofuse-3src (初赛 SOTA 真分 0.71755). 不带 e2v(funasr 重依赖, H-F1b 独立验证)/Omni(超时).
+# 入口: /app/run.sh → python -m src.infer_e2e → /app/submit/submit.csv
+# GPU 优先 (评测有 GPU) + CPU fallback.
+#
+# 唯一构建源 (废弃 ./Dockerfile, submission/*, cloud/Dockerfile).
+# 构建: docker build --platform linux/amd64 -f Dockerfile.finals -t <registry>:<tag> .
+# 推送: docker push <registry>:<tag>   (registry=finvcup-registry.cn-shanghai.cr.aliyuncs.com/finvcup/team26)
+
+FROM finvcup-registry.cn-shanghai.cr.aliyuncs.com/finvcup/team35:finv_baseline
+
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 OMP_NUM_THREADS=4
+WORKDIR /app
+
+# Layer 1: 系统依赖
+RUN apt-get update && apt-get install -y --no-install-recommends libsndfile1 libgomp1 && rm -rf /var/lib/apt/lists/*
+
+# Layer 2: Python 依赖 (pynvml = 官方硬要求; 三源不需 peft/funasr)
+RUN pip install --no-cache-dir lightgbm joblib scikit-learn pynvml
+
+# Layer 3-5: 模型权重 (每源一层, Docker cache 复用; 三源不带 e2v/Omni)
+COPY models/ctx_only/ /app/models/ctx_only/
+COPY models/whisper-large-v3/ /app/models/whisper-large-v3/
+COPY models/chinese-hubert-large/ /app/models/chinese-hubert-large/
+
+# Layer 6-7: Head ckpt (whisper / hubert)
+COPY models/wsp_head/ /app/models/wsp_head/
+COPY models/hub_head/ /app/models/hub_head/
+
+# Layer 8: 代码 + 入口 (只 COPY 推理必需, 不带 tools/cloud → 镜像瘦身 + 缓存稳定)
+COPY src/ /app/src/
+COPY run.sh /app/run.sh
+RUN mkdir -p /app/submit && chmod +x /app/run.sh
+
+CMD ["bash"]

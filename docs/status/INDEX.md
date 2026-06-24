@@ -7,6 +7,8 @@
 
 | 文件 | 是什么 | 状态 |
 |---|---|---|
+| `2026-06-24-复赛端到端作战图.md` | **★★ 复赛阶段唯一作战入口** — 评测口径(端到端 vs 离线) / S5 组件×60min可行性 / 缺口 / 镜像工程问题 / Phase A-D 路线（含⚡重大修正段） | 🟢 active |
+| `2026-06-24-镜像架构设计-H-F1F2.md` | **★ H-F1/F2 镜像架构设计+实现** — 三源干净架构 src/{common,infer_e2e,sources/}, Dockerfile唯一源, tag规范。已实现+构建team26:r3-base-20260624(20.4G), 融合逻辑验证identical初赛0.71755 | 🟢 active |
 | `CURRENT-STATE.md` | 结构快照：架构、关键文件、当前焦点 | 🟢 active |
 | `RESUME-NEXT-SESSION.md` | session 交接棒（恢复用 `/project-state resume`） | 🟢 active |
 | `JOURNAL.md` | append-only 事件日志 | 🟢 active |
