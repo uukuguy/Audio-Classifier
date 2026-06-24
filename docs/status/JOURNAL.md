@@ -628,3 +628,4 @@
 - 11:46 ★根因确认: 6/22 head(opencode训, 契约不明)才是坏的 — 喂正确特征反出错=它用了不同提取/数据训. 我的代码(提取+融合)对, head坏
 - 11:48 ★解法明确: 弃6/22 head, 用初赛验证过的 whisper-bcaug-multiseed/ckpt_seed{1,7,42}_fold{0-4}.pt(15个, 对应0.71755链路, 云端在). hub/e2v 同理找初赛验证ckpt
 - 11:50 三bug修复保留有效(tail/段长/ctx normalize 本就是初赛正确逻辑), 但单换正确head权重才是关键. 下一步: 拉初赛head ckpt到本地→端到端OOF自评F1验证→重建镜像
+- 12:00 commit 524884d: 复赛三源端到端架构 + r3-base 0.515诊断闭环 + 状态全收口. handoff (RESUME重写: 下步=换初赛head→OOF自评)
